@@ -1,0 +1,449 @@
+
+<h2 class="sr-only">Wireframe UI sistem prediksi triage IGD — panel input pasien, output prediksi SATS, dan explainability SHAP</h2>
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-sans)}
+.app-shell{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:1rem 0;align-items:start}
+@media(max-width:620px){.app-shell{grid-template-columns:1fr}}
+.card{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:1rem 1.25rem;margin-bottom:12px}
+.card-title{font-size:13px;font-weight:500;color:var(--color-text-secondary);letter-spacing:.04em;text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;gap:6px}
+.form-group{margin-bottom:12px}
+.form-label{font-size:12px;color:var(--color-text-secondary);margin-bottom:4px;display:block}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.form-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.hint{font-size:11px;color:var(--color-text-tertiary);margin-top:3px}
+.vital-field{position:relative}
+.vital-field .unit{position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--color-text-tertiary);pointer-events:none}
+.flag-warn{border-color:var(--color-border-warning) !important;background:var(--color-background-warning)}
+.flag-danger{border-color:var(--color-border-danger) !important;background:var(--color-background-danger)}
+.gcs-total{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:8px 12px;display:flex;justify-content:space-between;align-items:center;margin-top:6px}
+.gcs-total-num{font-size:20px;font-weight:500;color:var(--color-text-primary)}
+.pain-row{display:flex;align-items:center;gap:10px}
+.pain-labels{display:flex;justify-content:space-between;font-size:11px;color:var(--color-text-tertiary);margin-top:3px}
+.toggle-row{display:flex;gap:6px}
+.toggle-btn{flex:1;padding:7px;font-size:13px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:var(--color-background-primary);color:var(--color-text-primary);cursor:pointer;text-align:center}
+.toggle-btn.active{background:var(--color-background-info);border-color:var(--color-border-info);color:var(--color-text-info);font-weight:500}
+.btn-predict{width:100%;padding:11px;font-size:14px;font-weight:500;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:var(--color-background-primary);color:var(--color-text-primary);cursor:pointer;margin-bottom:6px}
+.btn-reset{width:100%;padding:8px;font-size:12px;border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);background:transparent;color:var(--color-text-secondary);cursor:pointer}
+.sats-badge{border-radius:var(--border-radius-lg);padding:16px;margin-bottom:12px;display:flex;align-items:center;gap:14px}
+.sats-badge.merah{background:#FCEBEB;border:0.5px solid #F09595}
+.sats-badge.oranye{background:#FAEEDA;border:0.5px solid #FAC775}
+.sats-badge.kuning{background:#FAEEDA;border:0.5px solid #EF9F27}
+.sats-badge.hijau{background:#EAF3DE;border:0.5px solid #97C459}
+.sats-badge.biru{background:#E6F1FB;border:0.5px solid #85B7EB}
+.sats-dot{width:36px;height:36px;border-radius:50%;flex-shrink:0}
+.dot-merah{background:#E24B4A}
+.dot-oranye{background:#BA7517}
+.dot-kuning{background:#EF9F27}
+.dot-hijau{background:#639922}
+.dot-biru{background:#378ADD}
+.sats-label-text{font-size:18px;font-weight:500;color:#501313}
+.sats-action{font-size:12px;color:#791F1F;margin-top:2px}
+.sats-badge.oranye .sats-label-text,.sats-badge.kuning .sats-label-text{color:#412402}
+.sats-badge.oranye .sats-action,.sats-badge.kuning .sats-action{color:#633806}
+.sats-badge.hijau .sats-label-text{color:#173404}
+.sats-badge.hijau .sats-action{color:#3B6D11}
+.sats-badge.biru .sats-label-text{color:#042C53}
+.sats-badge.biru .sats-action{color:#185FA5}
+.conf-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.conf-label{font-size:12px;color:var(--color-text-secondary);width:56px;flex-shrink:0}
+.conf-bar-bg{flex:1;height:7px;background:var(--color-background-secondary);border-radius:99px;overflow:hidden}
+.conf-bar-fill{height:100%;border-radius:99px}
+.conf-pct{font-size:12px;color:var(--color-text-secondary);width:32px;text-align:right;flex-shrink:0}
+.clinical-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.clin-card{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:8px 10px}
+.clin-card-label{font-size:11px;color:var(--color-text-secondary);margin-bottom:2px}
+.clin-card-val{font-size:16px;font-weight:500;color:var(--color-text-primary)}
+.clin-card-interp{font-size:11px;color:var(--color-text-warning)}
+.flags-row{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px}
+.flag-chip{font-size:11px;padding:3px 8px;border-radius:99px;background:var(--color-background-warning);color:var(--color-text-warning);border:0.5px solid var(--color-border-warning)}
+.flag-chip.danger{background:var(--color-background-danger);color:var(--color-text-danger);border-color:var(--color-border-danger)}
+.shap-bar-row{display:flex;align-items:center;gap:6px;margin-bottom:7px}
+.shap-feat{font-size:11px;color:var(--color-text-secondary);width:120px;flex-shrink:0;text-align:right}
+.shap-center{flex:1;position:relative;height:14px;display:flex;align-items:center}
+.shap-center-line{position:absolute;left:50%;width:0.5px;height:100%;background:var(--color-border-secondary)}
+.shap-pos{height:10px;border-radius:0 99px 99px 0;background:#E24B4A;position:absolute;left:50%}
+.shap-neg{height:10px;border-radius:99px 0 0 99px;background:#378ADD;position:absolute;right:50%}
+.shap-val{font-size:11px;color:var(--color-text-tertiary);width:36px;text-align:left;flex-shrink:0}
+.shap-legend{display:flex;gap:14px;margin-bottom:10px}
+.shap-legend-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--color-text-secondary)}
+.shap-legend-dot{width:10px;height:10px;border-radius:99px;flex-shrink:0}
+.section-divider{font-size:12px;font-weight:500;color:var(--color-text-tertiary);margin:8px 0 10px;padding-bottom:6px;border-bottom:0.5px solid var(--color-border-tertiary)}
+.disclaimer{font-size:11px;color:var(--color-text-secondary);background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:8px 10px;line-height:1.5;border-left:2px solid var(--color-border-warning)}
+.header-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;padding-bottom:12px;border-bottom:0.5px solid var(--color-border-tertiary)}
+.app-title{font-size:15px;font-weight:500;color:var(--color-text-primary)}
+.app-subtitle{font-size:11px;color:var(--color-text-secondary)}
+.version-badge{font-size:11px;color:var(--color-text-secondary);background:var(--color-background-secondary);padding:3px 8px;border-radius:99px;border:0.5px solid var(--color-border-tertiary)}
+.nav-tabs{display:flex;gap:4px;margin-bottom:12px}
+.nav-tab{font-size:12px;padding:5px 12px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-tertiary);background:transparent;color:var(--color-text-secondary);cursor:pointer}
+.nav-tab.active{background:var(--color-background-secondary);color:var(--color-text-primary);font-weight:500}
+.history-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:0.5px solid var(--color-border-tertiary);font-size:12px}
+.history-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+</style>
+
+<div style="padding:1rem 0">
+
+<div class="header-bar">
+  <div>
+    <div class="app-title"><i class="ti ti-heart-rate-monitor" aria-hidden="true" style="font-size:16px;vertical-align:-2px;margin-right:6px"></i>Sistem Prediksi Triage IGD</div>
+    <div class="app-subtitle">RSU Aulia · SATS-TEWS · XGBoost + SHAP</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px">
+    <span class="version-badge"><i class="ti ti-cpu" aria-hidden="true" style="font-size:11px;vertical-align:-1px;margin-right:3px"></i>Model v3.0</span>
+    <span class="version-badge" style="color:var(--color-text-success);border-color:var(--color-border-success)"><i class="ti ti-circle-check" aria-hidden="true" style="font-size:11px;vertical-align:-1px;margin-right:3px"></i>Aktif</span>
+  </div>
+</div>
+
+<div class="nav-tabs">
+  <button class="nav-tab active"><i class="ti ti-user-plus" aria-hidden="true" style="font-size:13px;vertical-align:-1px;margin-right:4px"></i>Input Pasien</button>
+  <button class="nav-tab"><i class="ti ti-history" aria-hidden="true" style="font-size:13px;vertical-align:-1px;margin-right:4px"></i>Riwayat Sesi</button>
+  <button class="nav-tab"><i class="ti ti-calculator" aria-hidden="true" style="font-size:13px;vertical-align:-1px;margin-right:4px"></i>Kalkulator TEWS</button>
+  <button class="nav-tab"><i class="ti ti-info-circle" aria-hidden="true" style="font-size:13px;vertical-align:-1px;margin-right:4px"></i>Panduan SATS</button>
+</div>
+
+<div class="app-shell">
+
+  <div>
+    <div class="card">
+      <div class="card-title"><i class="ti ti-user" aria-hidden="true" style="font-size:14px"></i>Identitas & demografis</div>
+      <div class="form-group">
+        <label class="form-label">Nama pasien <span style="color:var(--color-text-tertiary)">(opsional)</span></label>
+        <input type="text" placeholder="Nama pasien..." style="width:100%">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Usia (tahun)</label>
+          <input type="number" placeholder="0" style="width:100%">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Jenis kelamin</label>
+          <div class="toggle-row">
+            <div class="toggle-btn active">Laki-laki</div>
+            <div class="toggle-btn">Perempuan</div>
+          </div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Cara datang</label>
+        <select style="width:100%">
+          <option>Sendiri</option>
+          <option>KLL (Kecelakaan)</option>
+          <option>Rujukan Puskesmas</option>
+          <option>Rujukan Dokter</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><i class="ti ti-activity" aria-hidden="true" style="font-size:14px"></i>Tanda vital</div>
+      <div class="section-divider">Tekanan darah</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Sistole</label>
+          <div class="vital-field">
+            <input type="number" placeholder="120" style="width:100%;padding-right:36px" class="flag-danger">
+            <span class="unit">mmHg</span>
+          </div>
+          <div class="hint" style="color:var(--color-text-danger)"><i class="ti ti-alert-triangle" aria-hidden="true" style="font-size:11px;vertical-align:-1px"></i> Di bawah normal (< 90)</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Diastole</label>
+          <div class="vital-field">
+            <input type="number" placeholder="80" style="width:100%;padding-right:36px">
+            <span class="unit">mmHg</span>
+          </div>
+          <div class="hint">Normal: 60–90</div>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Denyut jantung</label>
+          <div class="vital-field">
+            <input type="number" placeholder="80" style="width:100%;padding-right:36px" class="flag-warn">
+            <span class="unit">bpm</span>
+          </div>
+          <div class="hint" style="color:var(--color-text-warning)"><i class="ti ti-alert-triangle" aria-hidden="true" style="font-size:11px;vertical-align:-1px"></i> Takikardia (> 100)</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Laju pernafasan</label>
+          <div class="vital-field">
+            <input type="number" placeholder="16" style="width:100%;padding-right:36px">
+            <span class="unit">x/mnt</span>
+          </div>
+          <div class="hint">Normal: 12–20</div>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Suhu tubuh</label>
+          <div class="vital-field">
+            <input type="number" placeholder="36.5" step="0.1" style="width:100%;padding-right:28px">
+            <span class="unit">°C</span>
+          </div>
+          <div class="hint">Normal: 36.0–37.5</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">SpO₂</label>
+          <div class="vital-field">
+            <input type="number" placeholder="98" style="width:100%;padding-right:20px" class="flag-danger">
+            <span class="unit">%</span>
+          </div>
+          <div class="hint" style="color:var(--color-text-danger)"><i class="ti ti-alert-triangle" aria-hidden="true" style="font-size:11px;vertical-align:-1px"></i> Hipoksia (< 90)</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><i class="ti ti-brain" aria-hidden="true" style="font-size:14px"></i>Neurologis & nyeri</div>
+      <div class="section-divider">Glasgow Coma Scale (GCS)</div>
+      <div class="form-row-3">
+        <div class="form-group">
+          <label class="form-label">Eye (E)</label>
+          <select style="width:100%">
+            <option>4 — Spontan</option>
+            <option>3 — Suara</option>
+            <option>2 — Nyeri</option>
+            <option>1 — Tidak ada</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Motor (M)</label>
+          <select style="width:100%">
+            <option>6 — Ikuti perintah</option>
+            <option>5 — Lokasi nyeri</option>
+            <option>4 — Fleksi normal</option>
+            <option>3 — Fleksi abnormal</option>
+            <option>2 — Ekstensi</option>
+            <option>1 — Tidak ada</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Verbal (V)</label>
+          <select style="width:100%">
+            <option>5 — Orientasi baik</option>
+            <option>4 — Bingung</option>
+            <option>3 — Kata-kata</option>
+            <option>2 — Suara saja</option>
+            <option>1 — Tidak ada</option>
+          </select>
+        </div>
+      </div>
+      <div class="gcs-total">
+        <div>
+          <div style="font-size:11px;color:var(--color-text-secondary)">GCS Total</div>
+          <div class="gcs-total-num">15</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:11px;color:var(--color-text-secondary)">Interpretasi</div>
+          <div style="font-size:13px;font-weight:500;color:var(--color-text-success)">Normal</div>
+        </div>
+      </div>
+      <div class="form-group" style="margin-top:12px">
+        <label class="form-label">Skala nyeri</label>
+        <div class="pain-row">
+          <span style="font-size:12px;color:var(--color-text-secondary);flex-shrink:0">0</span>
+          <input type="range" min="0" max="10" value="3" step="1" style="flex:1">
+          <span style="font-size:12px;color:var(--color-text-secondary);flex-shrink:0">10</span>
+          <span style="font-size:16px;font-weight:500;color:var(--color-text-primary);min-width:20px;text-align:center">3</span>
+        </div>
+        <div class="pain-labels"><span>Tidak nyeri</span><span>Sedang</span><span>Tak tertahankan</span></div>
+      </div>
+    </div>
+
+    <button class="btn-predict"><i class="ti ti-player-play" aria-hidden="true" style="font-size:14px;vertical-align:-2px;margin-right:6px"></i>Prediksi triage</button>
+    <button class="btn-reset"><i class="ti ti-refresh" aria-hidden="true" style="font-size:12px;vertical-align:-1px;margin-right:4px"></i>Reset form</button>
+  </div>
+
+  <div>
+    <div class="card">
+      <div class="card-title"><i class="ti ti-flag" aria-hidden="true" style="font-size:14px"></i>Hasil prediksi SATS</div>
+
+      <div class="sats-badge merah">
+        <div class="sats-dot dot-merah"></div>
+        <div>
+          <div class="sats-label-text">Merah — Resusitasi</div>
+          <div class="sats-action"><i class="ti ti-clock" aria-hidden="true" style="font-size:11px;vertical-align:-1px;margin-right:3px"></i>Penanganan segera — 0 menit</div>
+        </div>
+      </div>
+
+      <div class="section-divider">Distribusi probabilitas</div>
+      <div style="margin-bottom:14px">
+        <div class="conf-row">
+          <span class="conf-label">Merah</span>
+          <div class="conf-bar-bg"><div class="conf-bar-fill" style="width:72%;background:#E24B4A"></div></div>
+          <span class="conf-pct">72%</span>
+        </div>
+        <div class="conf-row">
+          <span class="conf-label">Oranye</span>
+          <div class="conf-bar-bg"><div class="conf-bar-fill" style="width:18%;background:#BA7517"></div></div>
+          <span class="conf-pct">18%</span>
+        </div>
+        <div class="conf-row">
+          <span class="conf-label">Kuning</span>
+          <div class="conf-bar-bg"><div class="conf-bar-fill" style="width:6%;background:#EF9F27"></div></div>
+          <span class="conf-pct">6%</span>
+        </div>
+        <div class="conf-row">
+          <span class="conf-label">Hijau</span>
+          <div class="conf-bar-bg"><div class="conf-bar-fill" style="width:3%;background:#639922"></div></div>
+          <span class="conf-pct">3%</span>
+        </div>
+        <div class="conf-row">
+          <span class="conf-label">Biru</span>
+          <div class="conf-bar-bg"><div class="conf-bar-fill" style="width:1%;background:#378ADD"></div></div>
+          <span class="conf-pct">1%</span>
+        </div>
+      </div>
+
+      <div class="section-divider">Clinical flags aktif</div>
+      <div class="flags-row">
+        <span class="flag-chip danger"><i class="ti ti-alert-triangle" aria-hidden="true" style="font-size:11px;vertical-align:-1px;margin-right:3px"></i>Hipotensi</span>
+        <span class="flag-chip danger"><i class="ti ti-alert-triangle" aria-hidden="true" style="font-size:11px;vertical-align:-1px;margin-right:3px"></i>Hipoksia</span>
+        <span class="flag-chip"><i class="ti ti-alert-triangle" aria-hidden="true" style="font-size:11px;vertical-align:-1px;margin-right:3px"></i>Takikardia</span>
+        <span class="flag-chip danger"><i class="ti ti-alert-triangle" aria-hidden="true" style="font-size:11px;vertical-align:-1px;margin-right:3px"></i>Hypoxic shock</span>
+      </div>
+
+      <div class="section-divider">Skor klinis turunan</div>
+      <div class="clinical-grid">
+        <div class="clin-card">
+          <div class="clin-card-label">Shock Index</div>
+          <div class="clin-card-val">1.62</div>
+          <div class="clin-card-interp"><i class="ti ti-alert-triangle" aria-hidden="true" style="font-size:11px;vertical-align:-1px"></i> Kritis (> 1.0)</div>
+        </div>
+        <div class="clin-card">
+          <div class="clin-card-label">MEWS Approx</div>
+          <div class="clin-card-val">7</div>
+          <div class="clin-card-interp"><i class="ti ti-alert-triangle" aria-hidden="true" style="font-size:11px;vertical-align:-1px"></i> Sangat tinggi (≥ 5)</div>
+        </div>
+        <div class="clin-card">
+          <div class="clin-card-label">TEWS Total</div>
+          <div class="clin-card-val">9</div>
+          <div class="clin-card-interp"><i class="ti ti-alert-triangle" aria-hidden="true" style="font-size:11px;vertical-align:-1px"></i> ≥ 7 → Oranye+</div>
+        </div>
+        <div class="clin-card">
+          <div class="clin-card-label">Cardiorespiratory</div>
+          <div class="clin-card-val">3 / 4</div>
+          <div class="clin-card-interp"><i class="ti ti-alert-triangle" aria-hidden="true" style="font-size:11px;vertical-align:-1px"></i> Distres berat</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><i class="ti ti-chart-bar" aria-hidden="true" style="font-size:14px"></i>Explainability — top fitur (SHAP)</div>
+      <div class="shap-legend">
+        <div class="shap-legend-item"><div class="shap-legend-dot" style="background:#E24B4A"></div>Mendorong ke kritis</div>
+        <div class="shap-legend-item"><div class="shap-legend-dot" style="background:#378ADD"></div>Menekan ke aman</div>
+      </div>
+
+      <div class="shap-bar-row">
+        <span class="shap-feat">SpO₂</span>
+        <div class="shap-center">
+          <div class="shap-center-line"></div>
+          <div class="shap-pos" style="width:54%"></div>
+        </div>
+        <span class="shap-val" style="color:#A32D2D">+0.54</span>
+      </div>
+      <div class="shap-bar-row">
+        <span class="shap-feat">Sistole</span>
+        <div class="shap-center">
+          <div class="shap-center-line"></div>
+          <div class="shap-pos" style="width:46%"></div>
+        </div>
+        <span class="shap-val" style="color:#A32D2D">+0.46</span>
+      </div>
+      <div class="shap-bar-row">
+        <span class="shap-feat">Shock index</span>
+        <div class="shap-center">
+          <div class="shap-center-line"></div>
+          <div class="shap-pos" style="width:38%"></div>
+        </div>
+        <span class="shap-val" style="color:#A32D2D">+0.38</span>
+      </div>
+      <div class="shap-bar-row">
+        <span class="shap-feat">Denyut jantung</span>
+        <div class="shap-center">
+          <div class="shap-center-line"></div>
+          <div class="shap-pos" style="width:28%"></div>
+        </div>
+        <span class="shap-val" style="color:#A32D2D">+0.28</span>
+      </div>
+      <div class="shap-bar-row">
+        <span class="shap-feat">GCS total</span>
+        <div class="shap-center">
+          <div class="shap-center-line"></div>
+          <div class="shap-neg" style="width:22%"></div>
+        </div>
+        <span class="shap-val" style="color:#185FA5">−0.22</span>
+      </div>
+      <div class="shap-bar-row">
+        <span class="shap-feat">Laju pernafasan</span>
+        <div class="shap-center">
+          <div class="shap-center-line"></div>
+          <div class="shap-pos" style="width:18%"></div>
+        </div>
+        <span class="shap-val" style="color:#A32D2D">+0.18</span>
+      </div>
+      <div class="shap-bar-row">
+        <span class="shap-feat">flag_hypoxic_shock</span>
+        <div class="shap-center">
+          <div class="shap-center-line"></div>
+          <div class="shap-pos" style="width:15%"></div>
+        </div>
+        <span class="shap-val" style="color:#A32D2D">+0.15</span>
+      </div>
+      <div class="shap-bar-row">
+        <span class="shap-feat">Usia</span>
+        <div class="shap-center">
+          <div class="shap-center-line"></div>
+          <div class="shap-neg" style="width:9%"></div>
+        </div>
+        <span class="shap-val" style="color:#185FA5">−0.09</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><i class="ti ti-history" aria-hidden="true" style="font-size:14px"></i>Riwayat sesi ini</div>
+      <div class="history-row">
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="history-dot" style="background:#E24B4A"></div>
+          <span style="color:var(--color-text-primary)">Pasien #3 · 65 th</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="color:#A32D2D;font-weight:500">Merah</span>
+          <span style="color:var(--color-text-tertiary)">14:32</span>
+        </div>
+      </div>
+      <div class="history-row">
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="history-dot" style="background:#378ADD"></div>
+          <span style="color:var(--color-text-primary)">Pasien #2 · 28 th</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="color:#185FA5;font-weight:500">Biru</span>
+          <span style="color:var(--color-text-tertiary)">14:21</span>
+        </div>
+      </div>
+      <div class="history-row" style="border-bottom:none">
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="history-dot" style="background:#EF9F27"></div>
+          <span style="color:var(--color-text-primary)">Pasien #1 · 47 th</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="color:#633806;font-weight:500">Kuning</span>
+          <span style="color:var(--color-text-tertiary)">14:08</span>
+        </div>
+      </div>
+      <div style="margin-top:10px">
+        <button style="font-size:12px;padding:6px 12px;border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);background:transparent;color:var(--color-text-secondary);cursor:pointer"><i class="ti ti-download" aria-hidden="true" style="font-size:12px;vertical-align:-1px;margin-right:4px"></i>Export CSV</button>
+      </div>
+    </div>
+
+    <div class="disclaimer">
+      <i class="ti ti-shield-check" aria-hidden="true" style="font-size:12px;vertical-align:-1px;margin-right:4px"></i>
+      Hasil ini adalah rekomendasi sistem pendukung keputusan (DSS). Keputusan triage final adalah wewenang eksklusif tenaga medis berlisensi.
+    </div>
+  </div>
+
+</div>
+</div>

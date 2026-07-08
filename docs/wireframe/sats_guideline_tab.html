@@ -1,0 +1,283 @@
+
+<h2 class="sr-only">Tab panduan SATS — referensi klinis 5 level triage, tabel scoring TEWS, kondisi override Merah, dan alur keputusan triage IGD</h2>
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+.card{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:1rem 1.25rem;margin-bottom:14px}
+.sec-title{font-size:13px;font-weight:500;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px;display:flex;align-items:center;gap:6px}
+.sats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:8px;margin-bottom:14px}
+.sats-card{border-radius:var(--border-radius-md);padding:12px 10px;border:0.5px solid transparent}
+.sats-card.merah{background:#FCEBEB;border-color:#F09595}
+.sats-card.oranye{background:#FAEEDA;border-color:#FAC775}
+.sats-card.kuning{background:#FAEEDA;border-color:#EF9F27}
+.sats-card.hijau{background:#EAF3DE;border-color:#C0DD97}
+.sats-card.biru{background:#E6F1FB;border-color:#85B7EB}
+.sats-dot-sm{width:12px;height:12px;border-radius:50%;display:inline-block;margin-right:5px;vertical-align:-2px}
+.sats-level{font-size:13px;font-weight:500}
+.sats-level.merah{color:#791F1F}.sats-level.oranye{color:#633806}.sats-level.kuning{color:#412402}.sats-level.hijau{color:#173404}.sats-level.biru{color:#042C53}
+.sats-eng{font-size:11px;margin:2px 0 6px}
+.sats-eng.merah{color:#A32D2D}.sats-eng.oranye{color:#854F0B}.sats-eng.kuning{color:#633806}.sats-eng.hijau{color:#27500A}.sats-eng.biru{color:#185FA5}
+.sats-time{font-size:11px;font-weight:500;padding:2px 7px;border-radius:99px;display:inline-block;margin-bottom:6px}
+.sats-time.merah{background:#F7C1C1;color:#791F1F}
+.sats-time.oranye{background:#FAC775;color:#412402}
+.sats-time.kuning{background:#EF9F27;color:#412402}
+.sats-time.hijau{background:#C0DD97;color:#173404}
+.sats-time.biru{background:#B5D4F4;color:#042C53}
+.sats-desc{font-size:11px;color:var(--color-text-secondary);line-height:1.5}
+.sats-example{font-size:10px;color:var(--color-text-tertiary);margin-top:4px;line-height:1.4;font-style:italic}
+.tews-table{width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed}
+.tews-table th{font-size:11px;font-weight:500;color:var(--color-text-secondary);padding:6px 8px;border-bottom:0.5px solid var(--color-border-secondary);text-align:left;background:var(--color-background-secondary)}
+.tews-table td{padding:6px 8px;border-bottom:0.5px solid var(--color-border-tertiary);vertical-align:middle;color:var(--color-text-primary)}
+.tews-table tr:last-child td{border-bottom:none}
+.score-badge{display:inline-block;font-size:11px;font-weight:500;padding:1px 6px;border-radius:99px;min-width:18px;text-align:center}
+.s0{background:#EAF3DE;color:#27500A}
+.s1{background:#FAEEDA;color:#633806}
+.s2{background:#FAEEDA;color:#412402}
+.s3{background:#FCEBEB;color:#791F1F}
+.override-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px}
+.override-card{background:#FCEBEB;border:0.5px solid #F09595;border-radius:var(--border-radius-md);padding:10px 12px}
+.override-title{font-size:12px;font-weight:500;color:#791F1F;margin-bottom:4px;display:flex;align-items:center;gap:5px}
+.override-val{font-size:11px;color:#A32D2D;line-height:1.5}
+.override-note{font-size:10px;color:#A32D2D;margin-top:3px;font-style:italic}
+.flow-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:6px}
+.flow-box{border-radius:var(--border-radius-md);padding:7px 12px;font-size:12px;font-weight:500;border:0.5px solid transparent;white-space:nowrap}
+.flow-box.gray{background:var(--color-background-secondary);border-color:var(--color-border-secondary);color:var(--color-text-primary)}
+.flow-box.merah{background:#FCEBEB;border-color:#F09595;color:#791F1F}
+.flow-box.oranye{background:#FAEEDA;border-color:#FAC775;color:#633806}
+.flow-box.kuning{background:#FAEEDA;border-color:#EF9F27;color:#412402}
+.flow-box.hijau{background:#EAF3DE;border-color:#C0DD97;color:#173404}
+.flow-box.biru{background:#E6F1FB;border-color:#85B7EB;color:#042C53}
+.flow-box.danger{background:#FCEBEB;border-color:#F09595;color:#791F1F}
+.flow-arrow{font-size:14px;color:var(--color-text-tertiary)}
+.flow-branch{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.flow-branch-label{font-size:11px;color:var(--color-text-tertiary);font-style:italic}
+.divider{height:0.5px;background:var(--color-border-tertiary);margin:10px 0}
+.ref-row{display:flex;flex-wrap:wrap;gap:8px;font-size:11px;color:var(--color-text-tertiary)}
+.ref-item{display:flex;align-items:center;gap:4px}
+.section-label{font-size:11px;font-weight:500;color:var(--color-text-secondary);margin-bottom:6px;padding-bottom:4px;border-bottom:0.5px solid var(--color-border-tertiary)}
+</style>
+
+<div style="padding:1rem 0">
+
+<div class="card">
+  <div class="sec-title"><i class="ti ti-flag" aria-hidden="true" style="font-size:14px"></i>5 level triage SATS</div>
+  <div class="sats-grid">
+    <div class="sats-card merah">
+      <div style="display:flex;align-items:center;margin-bottom:4px">
+        <span class="sats-dot-sm" style="background:#E24B4A"></span>
+        <span class="sats-level merah">Merah</span>
+      </div>
+      <div class="sats-eng merah">Resuscitation</div>
+      <span class="sats-time merah">Segera — 0 mnt</span>
+      <div class="sats-desc">Kondisi mengancam jiwa, butuh intervensi segera.</div>
+      <div class="sats-example">Henti jantung, GCS &le;8, syok berat, gagal napas</div>
+    </div>
+    <div class="sats-card oranye">
+      <div style="display:flex;align-items:center;margin-bottom:4px">
+        <span class="sats-dot-sm" style="background:#BA7517"></span>
+        <span class="sats-level oranye">Oranye</span>
+      </div>
+      <div class="sats-eng oranye">Emergent</div>
+      <span class="sats-time oranye">&lt;10 menit</span>
+      <div class="sats-desc">Risiko tinggi, bisa memburuk cepat tanpa tindakan.</div>
+      <div class="sats-example">Nyeri dada akut, stridor, fraktur terbuka, sepsis</div>
+    </div>
+    <div class="sats-card kuning">
+      <div style="display:flex;align-items:center;margin-bottom:4px">
+        <span class="sats-dot-sm" style="background:#EF9F27"></span>
+        <span class="sats-level kuning">Kuning</span>
+      </div>
+      <div class="sats-eng kuning">Urgent</div>
+      <span class="sats-time kuning">&lt;60 menit</span>
+      <div class="sats-desc">Perlu evaluasi segera, stabil namun perlu pemantauan.</div>
+      <div class="sats-example">Nyeri abdomen, fraktur tertutup, dehidrasi sedang</div>
+    </div>
+    <div class="sats-card hijau">
+      <div style="display:flex;align-items:center;margin-bottom:4px">
+        <span class="sats-dot-sm" style="background:#639922"></span>
+        <span class="sats-level hijau">Hijau</span>
+      </div>
+      <div class="sats-eng hijau">Less Urgent</div>
+      <span class="sats-time hijau">&lt;4 jam</span>
+      <div class="sats-desc">Kondisi tidak mengancam jiwa, bisa menunggu.</div>
+      <div class="sats-example">ISPA ringan, luka lecet, nyeri kepala ringan</div>
+    </div>
+    <div class="sats-card biru">
+      <div style="display:flex;align-items:center;margin-bottom:4px">
+        <span class="sats-dot-sm" style="background:#378ADD"></span>
+        <span class="sats-level biru">Biru</span>
+      </div>
+      <div class="sats-eng biru">Not Urgent</div>
+      <span class="sats-time biru">&lt;6 jam</span>
+      <div class="sats-desc">Keluhan ringan, bisa ditangani di fasilitas primer.</div>
+      <div class="sats-example">Keluhan kronik stabil, kontrol rutin, konsultasi</div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="sec-title"><i class="ti ti-table" aria-hidden="true" style="font-size:14px"></i>Tabel scoring TEWS — 6 parameter</div>
+  <div style="overflow-x:auto">
+    <table class="tews-table">
+      <colgroup>
+        <col style="width:22%">
+        <col style="width:36%">
+        <col style="width:10%">
+        <col style="width:32%">
+      </colgroup>
+      <thead>
+        <tr>
+          <th>Parameter</th>
+          <th>Rentang nilai</th>
+          <th>Skor</th>
+          <th>Keterangan klinis</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td rowspan="5" style="font-weight:500;border-right:0.5px solid var(--color-border-tertiary)">Laju pernafasan<br><span style="font-size:10px;font-weight:400;color:var(--color-text-tertiary)">x/menit</span></td><td>&lt; 9</td><td><span class="score-badge s3">3</span></td><td>Bradipnea — distres napas berat</td></tr>
+        <tr><td>9 – 11</td><td><span class="score-badge s1">1</span></td><td>Napas lambat — perlu perhatian</td></tr>
+        <tr><td>12 – 20</td><td><span class="score-badge s0">0</span></td><td>Normal</td></tr>
+        <tr><td>21 – 29</td><td><span class="score-badge s2">2</span></td><td>Takipnea sedang</td></tr>
+        <tr><td>&ge; 30</td><td><span class="score-badge s3">3</span></td><td>Takipnea berat — distres tinggi</td></tr>
+
+        <tr style="background:var(--color-background-secondary)"><td rowspan="4" style="font-weight:500;border-right:0.5px solid var(--color-border-tertiary)">SpO₂<br><span style="font-size:10px;font-weight:400;color:var(--color-text-tertiary)">%</span></td><td>&lt; 90%</td><td><span class="score-badge s3">3</span></td><td>Hipoksia berat — bahaya</td></tr>
+        <tr style="background:var(--color-background-secondary)"><td>90 – 94%</td><td><span class="score-badge s2">2</span></td><td>Hipoksia sedang</td></tr>
+        <tr style="background:var(--color-background-secondary)"><td>95 – 96%</td><td><span class="score-badge s1">1</span></td><td>Batas bawah normal</td></tr>
+        <tr style="background:var(--color-background-secondary)"><td>&ge; 97%</td><td><span class="score-badge s0">0</span></td><td>Normal</td></tr>
+
+        <tr><td rowspan="6" style="font-weight:500;border-right:0.5px solid var(--color-border-tertiary)">Sistole<br><span style="font-size:10px;font-weight:400;color:var(--color-text-tertiary)">mmHg</span></td><td>&lt; 70</td><td><span class="score-badge s3">3</span></td><td>Syok berat</td></tr>
+        <tr><td>70 – 89</td><td><span class="score-badge s2">2</span></td><td>Hipotensi — syok ringan-sedang</td></tr>
+        <tr><td>90 – 109</td><td><span class="score-badge s1">1</span></td><td>Rendah-normal</td></tr>
+        <tr><td>110 – 149</td><td><span class="score-badge s0">0</span></td><td>Normal</td></tr>
+        <tr><td>150 – 179</td><td><span class="score-badge s1">1</span></td><td>Hipertensi ringan</td></tr>
+        <tr><td>&ge; 180</td><td><span class="score-badge s2">2</span></td><td>Hipertensi berat</td></tr>
+
+        <tr style="background:var(--color-background-secondary)"><td rowspan="6" style="font-weight:500;border-right:0.5px solid var(--color-border-tertiary)">Denyut jantung<br><span style="font-size:10px;font-weight:400;color:var(--color-text-tertiary)">bpm</span></td><td>&lt; 40</td><td><span class="score-badge s3">3</span></td><td>Bradikardia berat</td></tr>
+        <tr style="background:var(--color-background-secondary)"><td>40 – 50</td><td><span class="score-badge s1">1</span></td><td>Bradikardia ringan</td></tr>
+        <tr style="background:var(--color-background-secondary)"><td>51 – 100</td><td><span class="score-badge s0">0</span></td><td>Normal</td></tr>
+        <tr style="background:var(--color-background-secondary)"><td>101 – 110</td><td><span class="score-badge s1">1</span></td><td>Takikardia ringan</td></tr>
+        <tr style="background:var(--color-background-secondary)"><td>111 – 129</td><td><span class="score-badge s2">2</span></td><td>Takikardia sedang</td></tr>
+        <tr style="background:var(--color-background-secondary)"><td>&ge; 130</td><td><span class="score-badge s3">3</span></td><td>Takikardia berat</td></tr>
+
+        <tr><td rowspan="3" style="font-weight:500;border-right:0.5px solid var(--color-border-tertiary)">Suhu tubuh<br><span style="font-size:10px;font-weight:400;color:var(--color-text-tertiary)">°C</span></td><td>&lt; 35.0°C</td><td><span class="score-badge s2">2</span></td><td>Hipotermia</td></tr>
+        <tr><td>35.0 – 38.4°C</td><td><span class="score-badge s0">0</span></td><td>Normal</td></tr>
+        <tr><td>&ge; 38.5°C</td><td><span class="score-badge s1">1</span></td><td>Demam / hipertermia</td></tr>
+
+        <tr style="background:var(--color-background-secondary)"><td rowspan="4" style="font-weight:500;border-right:0.5px solid var(--color-border-tertiary)">GCS total<br><span style="font-size:10px;font-weight:400;color:var(--color-text-tertiary)">3–15</span></td><td>&le; 8</td><td><span class="score-badge s3">3</span></td><td>Koma — airway tidak terlindungi</td></tr>
+        <tr style="background:var(--color-background-secondary)"><td>9 – 12</td><td><span class="score-badge s2">2</span></td><td>Penurunan kesadaran sedang</td></tr>
+        <tr style="background:var(--color-background-secondary)"><td>13 – 14</td><td><span class="score-badge s1">1</span></td><td>Penurunan kesadaran ringan</td></tr>
+        <tr style="background:var(--color-background-secondary)"><td>15</td><td><span class="score-badge s0">0</span></td><td>Kesadaran penuh — normal</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;font-size:11px;color:var(--color-text-secondary);align-items:center">
+    <span style="font-weight:500">Legenda skor:</span>
+    <span class="score-badge s0" style="font-size:11px">0</span><span>Normal</span>
+    <span class="score-badge s1" style="font-size:11px">1</span><span>Perhatian</span>
+    <span class="score-badge s2" style="font-size:11px">2</span><span>Waspada</span>
+    <span class="score-badge s3" style="font-size:11px">3</span><span>Kritis</span>
+  </div>
+</div>
+
+<div class="card">
+  <div class="sec-title"><i class="ti ti-alert-triangle" aria-hidden="true" style="font-size:14px"></i>Override criteria — langsung Merah</div>
+  <div style="font-size:12px;color:var(--color-text-secondary);margin-bottom:10px">Kondisi berikut menetapkan triage <strong>Merah</strong> secara langsung, terlepas dari total skor TEWS.</div>
+  <div class="override-grid">
+    <div class="override-card">
+      <div class="override-title"><i class="ti ti-brain" aria-hidden="true" style="font-size:13px"></i>Penurunan kesadaran berat</div>
+      <div class="override-val">GCS total &le; 8</div>
+      <div class="override-note">Airway tidak terlindungi — risiko aspirasi</div>
+    </div>
+    <div class="override-card">
+      <div class="override-title"><i class="ti ti-heart-broken" aria-hidden="true" style="font-size:13px"></i>Syok hemodinamik</div>
+      <div class="override-val">Sistole &lt; 70 mmHg</div>
+      <div class="override-note">Perfusi organ tidak adekuat — emergencies</div>
+    </div>
+    <div class="override-card">
+      <div class="override-title"><i class="ti ti-lungs" aria-hidden="true" style="font-size:13px"></i>Gagal napas + hipoksia</div>
+      <div class="override-val">SpO₂ &lt; 90%<br>DAN (RR &lt; 9 ATAU RR &ge; 30)</div>
+      <div class="override-note">Kombinasi hipoksia + gangguan frekuensi napas</div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="sec-title"><i class="ti ti-git-branch" aria-hidden="true" style="font-size:14px"></i>Alur keputusan triage</div>
+
+  <div class="section-label">1 — Pasien masuk IGD</div>
+  <div class="flow-row">
+    <div class="flow-box gray"><i class="ti ti-user-plus" aria-hidden="true" style="font-size:12px;vertical-align:-1px;margin-right:4px"></i>Pasien tiba di IGD</div>
+    <span class="flow-arrow">&#8594;</span>
+    <div class="flow-box gray">Ukur tanda vital &amp; GCS</div>
+  </div>
+
+  <div class="divider"></div>
+  <div class="section-label">2 — Cek override criteria (prioritas tertinggi)</div>
+  <div class="flow-row">
+    <div class="flow-box gray">Cek override criteria</div>
+    <span class="flow-arrow">&#8594;</span>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <div class="flow-row" style="margin:0">
+        <span class="flow-branch-label">Ya (salah satu terpenuhi)</span>
+        <span class="flow-arrow">&#8594;</span>
+        <div class="flow-box merah"><i class="ti ti-alert-triangle" aria-hidden="true" style="font-size:11px;vertical-align:-1px;margin-right:3px"></i>Merah — langsung resusitasi</div>
+      </div>
+      <div class="flow-row" style="margin:0">
+        <span class="flow-branch-label">Tidak ada yang terpenuhi</span>
+        <span class="flow-arrow">&#8594;</span>
+        <div class="flow-box gray">Hitung TEWS total</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+  <div class="section-label">3 — Hitung TEWS &amp; tentukan zona SATS</div>
+  <div style="display:flex;flex-direction:column;gap:6px">
+    <div class="flow-row">
+      <div class="flow-box gray" style="min-width:90px">TEWS &ge; 7</div>
+      <span class="flow-arrow">&#8594;</span>
+      <div class="flow-box oranye"><span class="sats-dot-sm" style="background:#BA7517"></span>Oranye — tangani &lt;10 mnt</div>
+    </div>
+    <div class="flow-row">
+      <div class="flow-box gray" style="min-width:90px">TEWS 5 – 6</div>
+      <span class="flow-arrow">&#8594;</span>
+      <div class="flow-box kuning"><span class="sats-dot-sm" style="background:#EF9F27"></span>Kuning — tangani &lt;60 mnt</div>
+    </div>
+    <div class="flow-row">
+      <div class="flow-box gray" style="min-width:90px">TEWS 3 – 4</div>
+      <span class="flow-arrow">&#8594;</span>
+      <div class="flow-box hijau"><span class="sats-dot-sm" style="background:#639922"></span>Hijau — tangani &lt;4 jam</div>
+    </div>
+    <div class="flow-row">
+      <div class="flow-box gray" style="min-width:90px">TEWS 0 – 2</div>
+      <span class="flow-arrow">&#8594;</span>
+      <div class="flow-box biru"><span class="sats-dot-sm" style="background:#378ADD"></span>Biru — tangani &lt;6 jam</div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+  <div class="section-label">4 — Output akhir</div>
+  <div class="flow-row">
+    <div class="flow-box gray">Zona SATS ditetapkan</div>
+    <span class="flow-arrow">&#8594;</span>
+    <div class="flow-box gray">Dokter/perawat verifikasi</div>
+    <span class="flow-arrow">&#8594;</span>
+    <div class="flow-box gray" style="border-color:var(--color-border-success);color:var(--color-text-success)"><i class="ti ti-circle-check" aria-hidden="true" style="font-size:12px;vertical-align:-1px;margin-right:3px"></i>Tindakan dimulai</div>
+  </div>
+
+  <div style="margin-top:12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:8px 10px;font-size:11px;color:var(--color-text-secondary);border-left:2px solid var(--color-border-warning);border-radius:0">
+    <i class="ti ti-shield-check" aria-hidden="true" style="font-size:11px;vertical-align:-1px;margin-right:4px"></i>Sistem ini adalah alat bantu keputusan. Penetapan triage final adalah wewenang tenaga medis berlisensi.
+  </div>
+</div>
+
+<div class="card">
+  <div class="sec-title"><i class="ti ti-book" aria-hidden="true" style="font-size:14px"></i>Referensi</div>
+  <div class="ref-row">
+    <div class="ref-item"><i class="ti ti-file-text" aria-hidden="true" style="font-size:12px"></i>South African Triage Scale (SATS), 2012</div>
+    <div class="ref-item"><i class="ti ti-file-text" aria-hidden="true" style="font-size:12px"></i>Twomey M. et al. — Emerg Med J, 2007</div>
+    <div class="ref-item"><i class="ti ti-file-text" aria-hidden="true" style="font-size:12px"></i>Subbe CP. et al. (MEWS) — QJM, 2001</div>
+    <div class="ref-item"><i class="ti ti-file-text" aria-hidden="true" style="font-size:12px"></i>Birkhahn RH. et al. (Shock Index) — 2005</div>
+  </div>
+</div>
+
+</div>

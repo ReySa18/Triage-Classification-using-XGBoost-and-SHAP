@@ -1,0 +1,47 @@
+# ─── Python ────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# ─── Virtual Environment ────────────────────────────────────
+venv/
+.venv/
+env/
+.env
+
+# ─── Jupyter Notebook Checkpoints ──────────────────────────
+.ipynb_checkpoints/
+
+# ─── Model Artifacts (besar, generate ulang via retrain.py) ─
+# Uncomment baris di bawah jika ingin exclude dari Git
+# model/artifacts/*.pkl
+# model/artifacts/shap_explainer.pkl
+
+# SHAP explainer sangat besar (>13MB), sebaiknya exclude
+model/artifacts/shap_explainer.pkl
+
+# ─── Dataset Sensitif (rekam medis pasien) ──────────────────
+# Data rekam medis tidak boleh di-commit ke repository publik
+data/raw/Dataset_Klinis_Edit.csv
+data/processed/Dataset_Labeled_SATS.csv
+
+# ─── OS & Editor ────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.vscode/settings.json
+
+# ─── Streamlit ──────────────────────────────────────────────
+.streamlit/secrets.toml
+
+# ─── Temporary / Backup files ───────────────────────────────
+*.bak
+*.tmp
+*.log
