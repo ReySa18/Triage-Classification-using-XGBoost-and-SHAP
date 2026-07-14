@@ -6,8 +6,8 @@ Tab 1: Input Pasien & Hasil Prediksi
 import streamlit as st
 import pandas as pd
 import datetime
-from backend.feature_engineering import SATS_COLORS, SATS_FULL_LABELS, SATS_WAKTU
-from backend.tews_calculator import check_override
+from backend.feature_engineering import SATS_COLORS
+from ui.components import LABEL_TO_CLASS, TRIAGE_ORDER, triage_result_hero_html
 
 
 # ─── Vital sign thresholds for real-time color flags ───────────────────────
@@ -44,28 +44,14 @@ def render_vital_hint(field: str, value):
 
 
 def render_sats_badge(predicted_class: int):
-    c = SATS_COLORS[predicted_class]
-    label = SATS_FULL_LABELS[predicted_class].upper()
-    waktu = SATS_WAKTU[predicted_class].upper()
-    hex_color = c['hex']
-    st.markdown(f"""
-    <div style="background:{hex_color}; border-radius:12px; padding:1.5rem; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; color:white; box-shadow:0 4px 12px rgba(0,0,0,0.1); margin-bottom:1rem;">
-        <h3 style="font-size:1.5rem; font-weight:700; margin:0 0 0.5rem 0; letter-spacing:0.05em; color:white;">{label}</h3>
-        <div style="display:inline-flex; align-items:center; gap:0.4rem; background:rgba(255,255,255,0.25); padding:0.4rem 1rem; border-radius:999px; font-size:0.85rem; font-weight:600;">
-            ⏱ {waktu}
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown(triage_result_hero_html(predicted_class), unsafe_allow_html=True)
 
 
 def render_probability_bars(probabilities: dict):
-    # Sort by probability descending
-    sorted_probs = sorted(probabilities.items(), key=lambda x: x[1], reverse=True)
-    sats_name_to_class = {'Merah': 0, 'Oranye': 1, 'Kuning': 2, 'Hijau': 3, 'Biru': 4}
-
     html = '<div class="prob-bar-container">'
-    for label, prob in sorted_probs:
-        cls = sats_name_to_class.get(label, 0)
+    for cls in TRIAGE_ORDER:
+        label = next((name for name, label_cls in LABEL_TO_CLASS.items() if label_cls == cls), "")
+        prob = probabilities.get(label, 0)
         color = SATS_COLORS[cls]['dot']
         pct = prob * 100
         html += f'<div class="prob-bar-row"><div class="prob-bar-label">{label}</div><div class="prob-bar-track"><div class="prob-bar-fill" style="width:{pct:.1f}%;background:{color};"></div></div><div class="prob-bar-pct">{pct:.1f}%</div></div>'
@@ -177,9 +163,10 @@ def render_session_history():
             <td>{entry['waktu']}</td>
             <td>{entry.get('nama', '-')}</td>
             <td>{entry.get('usia', '-')} th</td>
-            <td><span style="display:inline-flex;align-items:center;gap:0.3rem;">
+            <td><span style="display:inline-flex;align-items:center;gap:0.4rem;">
+                <span class="triage-number">L{cls + 1}</span>
                 <span style="width:9px;height:9px;border-radius:50%;background:{dot_color};flex-shrink:0;"></span>
-                {entry['prediksi']}
+                <strong>{entry['prediksi']}</strong>
             </span></td>
             <td>{entry.get('confidence', '-')}%</td>
         </tr>"""
@@ -273,107 +260,96 @@ def render_tab_prediction(artifacts):
     with col_input:
 
         # ── SEKSI A: Identitas & Demografis ──
-        st.markdown('<div class="section-card">', unsafe_allow_html=True)
-        st.markdown('<div class="section-title">👤 Identitas & Demografis</div>', unsafe_allow_html=True)
+        with st.container(border=True):
+            st.markdown('<div class="section-title">👤 Identitas & Demografis</div>', unsafe_allow_html=True)
 
-        c1, c2 = st.columns(2)
-        with c1:
-            nama = st.text_input("Nama Pasien", placeholder="Opsional (max 100 karakter)",
-                                  max_chars=100, key="inp_nama")
-        with c2:
-            usia = st.number_input("Usia (tahun) *", min_value=0, max_value=120, value=None,
-                                    placeholder="0–120", key="inp_usia")
+            c1, c2 = st.columns(2)
+            with c1:
+                nama = st.text_input("Nama Pasien", placeholder="Opsional (max 100 karakter)",
+                                      max_chars=100, key="inp_nama")
+            with c2:
+                usia = st.number_input("Usia (tahun) *", min_value=0, max_value=120, value=None,
+                                        placeholder="0–120", key="inp_usia")
 
-        c3, c4 = st.columns(2)
-        with c3:
-            jenis_kelamin = st.radio("Jenis Kelamin *", ["Laki-laki", "Perempuan"],
-                                      horizontal=True, key="inp_jk")
-        with c4:
-            cara_datang = st.selectbox("Cara Datang *",
-                ["Sendiri", "KLL (Kecelakaan)", "Rujukan Puskesmas", "Rujukan Dokter"],
-                key="inp_cara")
-
-        st.markdown('</div>', unsafe_allow_html=True)
+            c3, c4 = st.columns(2)
+            with c3:
+                jenis_kelamin = st.radio("Jenis Kelamin *", ["Laki-laki", "Perempuan"],
+                                          horizontal=True, key="inp_jk")
+            with c4:
+                cara_datang = st.selectbox("Cara Datang *",
+                    ["Sendiri", "KLL (Kecelakaan)", "Rujukan Puskesmas", "Rujukan Dokter"],
+                    key="inp_cara")
 
         # ── SEKSI B: Tanda Vital ──
-        st.markdown('<div class="section-card">', unsafe_allow_html=True)
-        st.markdown('<div class="section-title">❤️ Tanda Vital</div>', unsafe_allow_html=True)
+        with st.container(border=True):
+            st.markdown('<div class="section-title">❤️ Tanda Vital</div>', unsafe_allow_html=True)
 
-        b1, b2 = st.columns(2)
-        with b1:
-            sistole = st.number_input("Sistole (mmHg) *", min_value=40, max_value=300,
-                                       value=None, placeholder="110–149", key="inp_sistole")
-            render_vital_hint('sistole', sistole)
-        with b2:
-            diastole = st.number_input("Diastole (mmHg) *", min_value=20, max_value=200,
-                                        value=None, placeholder="60–90", key="inp_diastole")
-            render_vital_hint('diastole', diastole)
+            b1, b2 = st.columns(2)
+            with b1:
+                sistole = st.number_input("Sistole (mmHg) *", min_value=40, max_value=300,
+                                           value=None, placeholder="110–149", key="inp_sistole")
+                render_vital_hint('sistole', sistole)
+            with b2:
+                diastole = st.number_input("Diastole (mmHg) *", min_value=20, max_value=200,
+                                            value=None, placeholder="60–90", key="inp_diastole")
+                render_vital_hint('diastole', diastole)
 
-        b3, b4, b5 = st.columns(3)
-        with b3:
-            hr = st.number_input("Denyut Jantung (bpm) *", min_value=10, max_value=300,
-                                  value=None, placeholder="51–100", key="inp_hr")
-            render_vital_hint('denyut_jantung', hr)
-        with b4:
-            rr = st.number_input("Laju Pernafasan (x/mnt) *", min_value=0, max_value=80,
-                                  value=None, placeholder="12–20", key="inp_rr")
-            render_vital_hint('laju_pernafasan', rr)
-        with b5:
-            suhu = st.number_input("Suhu Tubuh (°C) *", min_value=30.0, max_value=45.0,
-                                    step=0.1, value=None, placeholder="36.0–37.5", key="inp_suhu")
-            render_vital_hint('suhu_tubuh', suhu)
+            b3, b4, b5 = st.columns(3)
+            with b3:
+                hr = st.number_input("Denyut Jantung (bpm) *", min_value=10, max_value=300,
+                                      value=None, placeholder="51–100", key="inp_hr")
+                render_vital_hint('denyut_jantung', hr)
+            with b4:
+                rr = st.number_input("Laju Pernafasan (x/mnt) *", min_value=0, max_value=80,
+                                      value=None, placeholder="12–20", key="inp_rr")
+                render_vital_hint('laju_pernafasan', rr)
+            with b5:
+                suhu = st.number_input("Suhu Tubuh (°C) *", min_value=30.0, max_value=45.0,
+                                        step=0.1, value=None, placeholder="36.0–37.5", key="inp_suhu")
+                render_vital_hint('suhu_tubuh', suhu)
 
-        spo2 = st.number_input("SpO₂ (%) *", min_value=0, max_value=100,
-                                 value=None, placeholder="97–100", key="inp_spo2")
-        render_vital_hint('SpO2', spo2)
-
-        st.markdown('</div>', unsafe_allow_html=True)
+            spo2 = st.number_input("SpO₂ (%) *", min_value=0, max_value=100,
+                                     value=None, placeholder="97–100", key="inp_spo2")
+            render_vital_hint('SpO2', spo2)
 
         # ── SEKSI C: Neurologis (GCS) ──
-        st.markdown('<div class="section-card">', unsafe_allow_html=True)
-        st.markdown('<div class="section-title">🧠 Neurologis (GCS)</div>', unsafe_allow_html=True)
+        with st.container(border=True):
+            st.markdown('<div class="section-title">🧠 Neurologis (GCS)</div>', unsafe_allow_html=True)
 
-        st.markdown('<div class="subsection-label">GCS (Glasgow Coma Scale)</div>', unsafe_allow_html=True)
+            st.markdown('<div class="subsection-label">GCS (Glasgow Coma Scale)</div>', unsafe_allow_html=True)
 
-        gcs_e_opts = {4: '4 — Spontan', 3: '3 — Respons suara', 2: '2 — Respons nyeri', 1: '1 — Tidak ada'}
-        gcs_m_opts = {6: '6 — Ikuti perintah', 5: '5 — Lokasi nyeri', 4: '4 — Fleksi normal',
-                      3: '3 — Fleksi abnormal', 2: '2 — Ekstensi', 1: '1 — Tidak ada'}
-        gcs_v_opts = {5: '5 — Orientasi baik', 4: '4 — Bingung', 3: '3 — Hanya kata-kata',
-                      2: '2 — Hanya suara', 1: '1 — Tidak ada'}
+            gcs_e_opts = {4: '4 — Spontan', 3: '3 — Respons suara', 2: '2 — Respons nyeri', 1: '1 — Tidak ada'}
+            gcs_m_opts = {6: '6 — Ikuti perintah', 5: '5 — Lokasi nyeri', 4: '4 — Fleksi normal',
+                          3: '3 — Fleksi abnormal', 2: '2 — Ekstensi', 1: '1 — Tidak ada'}
+            gcs_v_opts = {5: '5 — Orientasi baik', 4: '4 — Bingung', 3: '3 — Hanya kata-kata',
+                          2: '2 — Hanya suara', 1: '1 — Tidak ada'}
 
-        gc1, gc2, gc3, gc4 = st.columns([3, 3, 3, 2])
-        with gc1:
-            gcs_e = st.selectbox("Eye (E)", options=list(gcs_e_opts.keys()),
-                                  format_func=lambda x: gcs_e_opts[x], key="inp_gcs_e")
-        with gc2:
-            gcs_m = st.selectbox("Motor (M)", options=list(gcs_m_opts.keys()),
-                                  format_func=lambda x: gcs_m_opts[x], key="inp_gcs_m")
-        with gc3:
-            gcs_v = st.selectbox("Verbal (V)", options=list(gcs_v_opts.keys()),
-                                  format_func=lambda x: gcs_v_opts[x], key="inp_gcs_v")
-        with gc4:
-            gcs_total = gcs_e + gcs_m + gcs_v
-            if gcs_total <= 8:
-                gcs_interp = 'Koma berat'
-                gcs_color = '#E24B4A'
-            elif gcs_total <= 12:
-                gcs_interp = 'Sedang'
-                gcs_color = '#BA7517'
-            elif gcs_total <= 14:
-                gcs_interp = 'Ringan'
-                gcs_color = '#EF9F27'
-            else:
-                gcs_interp = 'Normal'
-                gcs_color = '#639922'
+            gc1, gc2, gc3, gc4 = st.columns([3, 3, 3, 2])
+            with gc1:
+                gcs_e = st.selectbox("Eye (E)", options=list(gcs_e_opts.keys()),
+                                      format_func=lambda x: gcs_e_opts[x], key="inp_gcs_e")
+            with gc2:
+                gcs_m = st.selectbox("Motor (M)", options=list(gcs_m_opts.keys()),
+                                      format_func=lambda x: gcs_m_opts[x], key="inp_gcs_m")
+            with gc3:
+                gcs_v = st.selectbox("Verbal (V)", options=list(gcs_v_opts.keys()),
+                                      format_func=lambda x: gcs_v_opts[x], key="inp_gcs_v")
+            with gc4:
+                gcs_total = gcs_e + gcs_m + gcs_v
+                if gcs_total <= 8:
+                    gcs_interp = 'Koma berat'
+                    gcs_color = '#E24B4A'
+                elif gcs_total <= 12:
+                    gcs_interp = 'Sedang'
+                    gcs_color = '#BA7517'
+                elif gcs_total <= 14:
+                    gcs_interp = 'Ringan'
+                    gcs_color = '#EF9F27'
+                else:
+                    gcs_interp = 'Normal'
+                    gcs_color = '#639922'
 
-            st.markdown(f"""
-            <div class="gcs-display" style="margin-top:1.5rem;">
-                <div class="gcs-total-value">{gcs_total}</div>
-                <div class="gcs-total-label">GCS Total</div>
-                <div class="gcs-interpretation" style="color:{gcs_color};">{gcs_interp}</div>
-            </div>""", unsafe_allow_html=True)
-
-        st.markdown('</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="gcs-display" style="margin-top:1.5rem;"><div class="gcs-total-value">{gcs_total}</div><div class="gcs-total-label">GCS Total</div><div class="gcs-interpretation" style="color:{gcs_color};">{gcs_interp}</div></div>', unsafe_allow_html=True)
 
         # FEAT-007: skala_nyeri dihapus dari UI sepenuhnya
 
@@ -473,13 +449,11 @@ def render_tab_prediction(artifacts):
             st.divider()
 
             # ── D: Clinical Metrics ──
-            st.markdown('<p style="font-size:0.82rem;font-weight:600;color:var(--text-primary);margin:0 0 0.6rem 0;">📊 Skor Klinis Turunan</p>', unsafe_allow_html=True)
-            render_clinical_metrics(result['clinical_scores'])
-
-            st.divider()
+            with st.expander("📊 Skor Klinis Turunan", expanded=False):
+                render_clinical_metrics(result['clinical_scores'])
 
             # ── E: SHAP Panel ──
-            with st.expander("🔍 Alasan Prediksi — Top Fitur (SHAP)", expanded=True):
+            with st.expander("🔍 Alasan Prediksi — Top Fitur (SHAP)", expanded=False):
                 render_shap_panel(result['shap_top_features'], result['predicted_class'])
 
             # ── F: Session History ──

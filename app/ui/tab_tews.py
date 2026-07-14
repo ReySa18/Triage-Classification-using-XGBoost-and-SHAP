@@ -8,7 +8,8 @@ from backend.tews_calculator import (
     compute_tews_subscores, check_override,
     get_sats_zone_from_tews, get_active_range_label
 )
-from backend.feature_engineering import SATS_COLORS, SATS_FULL_LABELS, SATS_WAKTU
+from backend.feature_engineering import SATS_COLORS
+from ui.components import score_badge_html, triage_badge_html
 
 
 TEWS_REKOMENDASI = {
@@ -19,32 +20,8 @@ TEWS_REKOMENDASI = {
     4: "🔵 Tangani dalam 6 jam. Pertimbangkan rujuk ke fasilitas primer.",
 }
 
-SCORE_COLORS_VARS = {
-    0: 'var(--sats-green-dot)',
-    1: 'var(--sats-yellow-dot)',
-    2: 'var(--sats-orange-dot)',
-    3: 'var(--sats-red-dot)',
-}
-SCORE_BG_VARS = {
-    0: 'var(--sats-green-bg)',
-    1: 'var(--sats-yellow-bg)',
-    2: 'var(--sats-orange-bg)',
-    3: 'var(--sats-red-bg)',
-}
-SCORE_BORDER_VARS = {
-    0: 'var(--sats-green-border)',
-    1: 'var(--sats-yellow-border)',
-    2: 'var(--sats-orange-border)',
-    3: 'var(--sats-red-border)',
-}
-
-
 def render_score_badge(score: int) -> str:
-    s = min(max(score, 0), 3)
-    color = SCORE_COLORS_VARS[s]
-    bg = SCORE_BG_VARS[s]
-    border = SCORE_BORDER_VARS[s]
-    return f'<span style="display:inline-block;padding:0.15rem 0.6rem;border-radius:999px;background:{bg};color:{color};font-weight:700;font-size:0.8rem;border:1px solid {border};">{score}</span>'
+    return score_badge_html(score)
 
 
 def render_tews_breakdown(subscores: dict, rr, spo2, sbp, hr, temp, gcs_total):
@@ -123,6 +100,19 @@ def render_reference_table():
     st.markdown(html, unsafe_allow_html=True)
 
 
+def reset_tews_inputs():
+    defaults = {
+        'tews_rr': 16,
+        'tews_spo2': 98,
+        'tews_sbp': 120,
+        'tews_hr': 80,
+        'tews_temp': 36.5,
+        'tews_gcs': 15,
+    }
+    for key, value in defaults.items():
+        st.session_state[key] = value
+
+
 def render_tab_tews():
     st.markdown('<p style="font-size:0.85rem;color:var(--text-tertiary);margin-bottom:1rem;">Kalkulator TEWS mandiri — skor diperbarui secara real-time setiap kali nilai berubah.</p>', unsafe_allow_html=True)
 
@@ -132,58 +122,54 @@ def render_tab_tews():
     # PANEL KIRI — Input Parameter
     # ══════════════════════════════════════════════════════
     with col_left:
-        st.markdown('<div class="section-card">', unsafe_allow_html=True)
-        st.markdown('<div class="section-title">📋 Parameter Tanda Vital</div>', unsafe_allow_html=True)
+        with st.container(border=True):
+            st.markdown('<div class="section-title">📋 Parameter Tanda Vital</div>', unsafe_allow_html=True)
 
-        t1, t2 = st.columns(2)
-        with t1:
-            t_rr = st.number_input("Laju Pernafasan (x/mnt)", min_value=0, max_value=80,
-                                    value=16, step=1, key="tews_rr")
-        with t2:
-            t_spo2 = st.number_input("SpO₂ (%)", min_value=0, max_value=100,
-                                      value=98, step=1, key="tews_spo2")
+            t1, t2 = st.columns(2)
+            with t1:
+                t_rr = st.number_input("Laju Pernafasan (x/mnt)", min_value=0, max_value=80,
+                                        value=16, step=1, key="tews_rr")
+            with t2:
+                t_spo2 = st.number_input("SpO₂ (%)", min_value=0, max_value=100,
+                                          value=98, step=1, key="tews_spo2")
 
-        t3, t4 = st.columns(2)
-        with t3:
-            t_sbp = st.number_input("Tekanan Darah Sistole (mmHg)", min_value=0, max_value=300,
-                                     value=120, step=1, key="tews_sbp")
-        with t4:
-            t_hr = st.number_input("Denyut Jantung (bpm)", min_value=0, max_value=300,
-                                    value=80, step=1, key="tews_hr")
+            t3, t4 = st.columns(2)
+            with t3:
+                t_sbp = st.number_input("Tekanan Darah Sistole (mmHg)", min_value=0, max_value=300,
+                                         value=120, step=1, key="tews_sbp")
+            with t4:
+                t_hr = st.number_input("Denyut Jantung (bpm)", min_value=0, max_value=300,
+                                        value=80, step=1, key="tews_hr")
 
-        t5, t6 = st.columns(2)
-        with t5:
-            t_temp = st.number_input("Suhu Tubuh (°C)", min_value=30.0, max_value=45.0,
-                                      value=36.5, step=0.1, format="%.1f", key="tews_temp")
-        with t6:
-            t_gcs = st.number_input("GCS Total", min_value=3, max_value=15,
-                                     value=15, step=1, key="tews_gcs")
+            t5, t6 = st.columns(2)
+            with t5:
+                t_temp = st.number_input("Suhu Tubuh (°C)", min_value=30.0, max_value=45.0,
+                                          value=36.5, step=0.1, format="%.1f", key="tews_temp")
+            with t6:
+                t_gcs = st.number_input("GCS Total", min_value=3, max_value=15,
+                                         value=15, step=1, key="tews_gcs")
 
-        col_btn1, col_btn2 = st.columns(2)
-        with col_btn1:
-            reset_tews = st.button("🔄 Reset", use_container_width=True, key="tews_reset")
-        with col_btn2:
-            copy_to_tab1 = st.button("📋 Salin ke Tab Input", use_container_width=True, key="tews_copy")
+            col_btn1, col_btn2 = st.columns(2)
+            with col_btn1:
+                st.button(
+                    "🔄 Reset",
+                    use_container_width=True,
+                    key="tews_reset",
+                    on_click=reset_tews_inputs,
+                )
+            with col_btn2:
+                copy_to_tab1 = st.button("📋 Salin ke Tab Input", type="primary", use_container_width=True, key="tews_copy")
 
-        if reset_tews:
-            for k in ['tews_rr', 'tews_spo2', 'tews_sbp', 'tews_hr', 'tews_temp', 'tews_gcs']:
-                defaults = {'tews_rr': 16, 'tews_spo2': 98, 'tews_sbp': 120,
-                            'tews_hr': 80, 'tews_temp': 36.5, 'tews_gcs': 15}
-                st.session_state[k] = defaults[k]
-            st.rerun()
-
-        if copy_to_tab1:
-            st.session_state['copy_from_tews'] = {
-                'laju_pernafasan': t_rr,
-                'SpO2': t_spo2,
-                'sistole': t_sbp,
-                'denyut_jantung': t_hr,
-                'suhu_tubuh': t_temp,
-                'gcs_total': t_gcs,
-            }
-            st.success("✅ Data disalin! Buka Tab 'Input Pasien' dan klik 'Muat dari Kalkulator TEWS'.")
-
-        st.markdown('</div>', unsafe_allow_html=True)
+            if copy_to_tab1:
+                st.session_state['copy_from_tews'] = {
+                    'laju_pernafasan': t_rr,
+                    'SpO2': t_spo2,
+                    'sistole': t_sbp,
+                    'denyut_jantung': t_hr,
+                    'suhu_tubuh': t_temp,
+                    'gcs_total': t_gcs,
+                }
+                st.success("✅ Data disalin! Buka Tab 'Input Pasien' dan klik 'Muat dari Kalkulator TEWS'.")
 
         # Reference table (accordion)
         with st.expander("📖 Lihat Tabel Referensi Scoring Lengkap", expanded=False):
@@ -200,41 +186,31 @@ def render_tab_tews():
         sats_zone = get_sats_zone_from_tews(tews_total, overrides)
 
         # ── TEWS Total Display ──
-        st.markdown('<div class="section-card" style="text-align:center;">', unsafe_allow_html=True)
+        with st.container(border=True):
+            st.markdown('<div style="text-align:center;">', unsafe_allow_html=True)
 
-        # Zone colors
-        if tews_total <= 2:
-            tews_color = 'var(--sats-blue-dot)'
-            zone_label = 'Zona Biru'
-        elif tews_total <= 4:
-            tews_color = 'var(--sats-green-dot)'
-            zone_label = 'Zona Hijau'
-        elif tews_total <= 6:
-            tews_color = 'var(--sats-yellow-dot)'
-            zone_label = 'Zona Kuning'
-        else:
-            tews_color = 'var(--sats-red-dot)'
-            zone_label = 'Zona Oranye+'
+            # Zone colors
+            if tews_total <= 2:
+                tews_color = 'var(--sats-blue-dot)'
+                zone_label = 'Zona Biru'
+            elif tews_total <= 4:
+                tews_color = 'var(--sats-green-dot)'
+                zone_label = 'Zona Hijau'
+            elif tews_total <= 6:
+                tews_color = 'var(--sats-yellow-dot)'
+                zone_label = 'Zona Kuning'
+            else:
+                tews_color = 'var(--sats-red-dot)'
+                zone_label = 'Zona Oranye+'
 
-        if overrides:
-            tews_color = 'var(--sats-red-dot)'
-            zone_label = 'OVERRIDE → Merah'
+            if overrides:
+                tews_color = 'var(--sats-red-dot)'
+                zone_label = 'OVERRIDE → Merah'
 
-        sats_c = SATS_COLORS[sats_zone]
-        waktu = SATS_WAKTU[sats_zone]
-
-        st.markdown(f"""
-        <div style="padding:0.5rem 0;">
-            <div style="font-size:0.75rem;color:var(--text-tertiary);font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">TEWS Total</div>
-            <div class="tews-score-big" style="color:{tews_color};">{tews_total}</div>
-            <div>
-                <span class="tews-zone-badge" style="background:{sats_c['bg']};color:{sats_c['text']};border:1px solid {sats_c['border']};">
-                    {SATS_FULL_LABELS[sats_zone]} — {waktu}
-                </span>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-        st.markdown('</div>', unsafe_allow_html=True)
+            sats_c = SATS_COLORS[sats_zone]
+            st.markdown(f'<div style="padding:0.5rem 0;"><div style="font-size:0.75rem;color:var(--text-tertiary);font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">TEWS Total</div><div class="tews-score-big" style="color:{tews_color};">{tews_total}</div></div>', unsafe_allow_html=True)
+            st.markdown(triage_badge_html(sats_zone), unsafe_allow_html=True)
+            st.markdown('</div>', unsafe_allow_html=True)
 
         # ── Override Warning ──
         if overrides:
@@ -247,19 +223,14 @@ def render_tab_tews():
             </div>""", unsafe_allow_html=True)
 
         # ── Sub-score Breakdown ──
-        st.markdown('<div class="section-card">', unsafe_allow_html=True)
-        st.markdown('<div class="section-title">📊 Breakdown Sub-skor</div>', unsafe_allow_html=True)
-        render_tews_breakdown(subscores, t_rr, t_spo2, t_sbp, t_hr, t_temp, t_gcs)
-        st.markdown('</div>', unsafe_allow_html=True)
+        with st.container(border=True):
+            st.markdown('<div class="section-title">📊 Breakdown Sub-skor</div>', unsafe_allow_html=True)
+            render_tews_breakdown(subscores, t_rr, t_spo2, t_sbp, t_hr, t_temp, t_gcs)
 
         # ── Rekomendasi ──
-        st.markdown('<div class="section-card">', unsafe_allow_html=True)
-        st.markdown('<div class="section-title">💊 Rekomendasi Tindakan</div>', unsafe_allow_html=True)
-        rekomendasi = TEWS_REKOMENDASI[sats_zone]
-        rek_color = sats_c['text']
-        rek_bg = sats_c['bg']
-        st.markdown(f"""
-        <div style="background:{rek_bg};border:1.5px solid {sats_c['border']};border-radius:8px;padding:0.75rem 1rem;">
-            <div style="font-size:0.85rem;color:{rek_color};font-weight:600;">{rekomendasi}</div>
-        </div>""", unsafe_allow_html=True)
-        st.markdown('</div>', unsafe_allow_html=True)
+        with st.container(border=True):
+            st.markdown('<div class="section-title">💊 Rekomendasi Tindakan</div>', unsafe_allow_html=True)
+            rekomendasi = TEWS_REKOMENDASI[sats_zone]
+            rek_color = sats_c['text']
+            rek_bg = sats_c['bg']
+            st.markdown(f'<div style="background:{rek_bg};border:1.5px solid {sats_c["border"]};border-radius:8px;padding:0.75rem 1rem;"><div style="font-size:0.85rem;color:{rek_color};font-weight:600;">{rekomendasi}</div></div>', unsafe_allow_html=True)

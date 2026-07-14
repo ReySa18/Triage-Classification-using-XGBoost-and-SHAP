@@ -57,6 +57,7 @@ if theme == 'dark':
         --input-border: #3a3f4b;
         --input-focus-border: #6aadff;
         --input-focus-shadow: rgba(106, 173, 255, 0.2);
+        --input-placeholder: #6b7280;
 
         --metric-bg: #22252d;
         --metric-value: #e4e5eb;
@@ -117,30 +118,35 @@ if theme == 'dark':
 
         --legend-bg: #22252d;
 
-        --sats-red-bg: #3d1f1f;
-        --sats-red-border: #7f1d1d;
-        --sats-red-text: #fca5a5;
-        --sats-red-dot: #ef4444;
+        --sats-red-bg: #3F1518;
+        --sats-red-border: #B91C1C;
+        --sats-red-text: #FECACA;
+        --sats-red-dot: #F87171;
+        --sats-red-solid-text: #111827;
 
-        --sats-orange-bg: #3d2e10;
-        --sats-orange-border: #78350f;
-        --sats-orange-text: #fcd34d;
-        --sats-orange-dot: #f59e0b;
+        --sats-orange-bg: #431F0A;
+        --sats-orange-border: #C2410C;
+        --sats-orange-text: #FED7AA;
+        --sats-orange-dot: #FB923C;
+        --sats-orange-solid-text: #111827;
 
-        --sats-yellow-bg: #3d3000;
-        --sats-yellow-border: #856404;
-        --sats-yellow-text: #ffe066;
-        --sats-yellow-dot: #f59e0b;
+        --sats-yellow-bg: #3A2A05;
+        --sats-yellow-border: #A16207;
+        --sats-yellow-text: #FEF08A;
+        --sats-yellow-dot: #FACC15;
+        --sats-yellow-solid-text: #111827;
 
-        --sats-green-bg: #1f3d1f;
-        --sats-green-border: #14532d;
-        --sats-green-text: #86efac;
-        --sats-green-dot: #22c55e;
+        --sats-green-bg: #102F1C;
+        --sats-green-border: #15803D;
+        --sats-green-text: #BBF7D0;
+        --sats-green-dot: #4ADE80;
+        --sats-green-solid-text: #111827;
 
-        --sats-blue-bg: #1e293b;
-        --sats-blue-border: #1e3a8a;
-        --sats-blue-text: #93c5fd;
-        --sats-blue-dot: #3b82f6;
+        --sats-blue-bg: #102A55;
+        --sats-blue-border: #1D4ED8;
+        --sats-blue-text: #BFDBFE;
+        --sats-blue-dot: #60A5FA;
+        --sats-blue-solid-text: #111827;
 
         --sats-time-badge-bg: rgba(255,255,255,0.15);
         --sats-card-opacity: 0.92;

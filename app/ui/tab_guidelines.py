@@ -4,7 +4,7 @@ Tab 3: Panduan SATS — referensi klinis statis
 """
 
 import streamlit as st
-from backend.feature_engineering import SATS_COLORS
+from ui.components import score_badge_html, triage_badge_html
 
 
 SATS_GUIDE_DATA = [
@@ -103,6 +103,20 @@ TEWS_SCORING_TABLE = [
 
 
 def render_sats_cards():
+    slugs = ['red', 'orange', 'yellow', 'green', 'blue']
+    cols = st.columns(5)
+    for col, data in zip(cols, SATS_GUIDE_DATA):
+        with col:
+            badge = triage_badge_html(data['level'])
+            card_html = (
+                f'{badge}'
+                f'<div class="sats-guide-card triage-{slugs[data["level"]]}" style="margin-top:0.5rem;">'
+                f'<div class="sats-definition">{data["definition"]}</div>'
+                f'<div class="sats-examples">{data["examples"]}</div>'
+                f'</div>'
+            )
+            st.markdown(card_html, unsafe_allow_html=True)
+    return
     cols = st.columns(5)
     for i, (col, data) in enumerate(zip(cols, SATS_GUIDE_DATA)):
         c = SATS_COLORS[data['level']]
@@ -121,19 +135,6 @@ def render_sats_cards():
 
 
 def render_tews_table():
-    SCORE_COLORS = {
-        0: 'var(--sats-green-dot)',
-        1: 'var(--sats-yellow-dot)',
-        2: 'var(--sats-orange-dot)',
-        3: 'var(--sats-red-dot)',
-    }
-    SCORE_BG = {
-        0: 'var(--sats-green-bg)',
-        1: 'var(--sats-yellow-bg)',
-        2: 'var(--sats-orange-bg)',
-        3: 'var(--sats-red-bg)',
-    }
-
     # Table header
     hdr = st.columns([3, 2, 1, 5])
     with hdr[0]:
@@ -148,8 +149,6 @@ def render_tews_table():
     # Table rows
     for i, param_data in enumerate(TEWS_SCORING_TABLE):
         for j, (range_val, score, keterangan) in enumerate(param_data['ranges']):
-            sc = SCORE_COLORS[min(score, 3)]
-            sb = SCORE_BG[min(score, 3)]
             row = st.columns([3, 2, 1, 5])
             with row[0]:
                 if j == 0:
@@ -159,7 +158,7 @@ def render_tews_table():
             with row[1]:
                 st.markdown(f'<div style="font-size:0.8rem;font-weight:600;text-align:center;color:var(--text-primary);padding:0.3rem 0;">{range_val}</div>', unsafe_allow_html=True)
             with row[2]:
-                st.markdown(f'<div style="text-align:center;padding:0.3rem 0;"><span style="display:inline-block;padding:0.1rem 0.5rem;border-radius:999px;background:{sb};color:{sc};font-weight:700;font-size:0.8rem;border:1px solid {sc}40;">{score}</span></div>', unsafe_allow_html=True)
+                st.markdown(f'<div style="text-align:center;padding:0.3rem 0;">{score_badge_html(score)}</div>', unsafe_allow_html=True)
             with row[3]:
                 st.markdown(f'<div style="font-size:0.78rem;color:var(--text-secondary);padding:0.3rem 0;">{keterangan}</div>', unsafe_allow_html=True)
         # Separator between parameter groups
@@ -205,6 +204,52 @@ def render_override_cards():
 
 
 def render_flowchart():
+    st.markdown("""
+    <div class="decision-flow" aria-label="Alur keputusan triage SATS TEWS">
+        <div class="decision-node">
+            <span class="decision-step-num">1</span>
+            <div>
+                <div class="decision-title">Pasien tiba</div>
+                <div class="decision-text">Ukur tanda vital lengkap, SpO2, dan GCS.</div>
+            </div>
+        </div>
+        <div class="decision-connector">&rarr;</div>
+        <div class="decision-branch">
+            <div class="decision-node">
+                <span class="decision-step-num">2</span>
+                <div>
+                    <div class="decision-title">Cek override merah</div>
+                    <div class="decision-text">GCS <= 8, sistole < 70, atau hipoksia berat + RR abnormal.</div>
+                </div>
+            </div>
+            <div class="decision-path triage-red">
+                <strong>Ya: langsung Level 1 Merah</strong>
+                Resusitasi segera tanpa menunggu total TEWS.
+            </div>
+            <div class="decision-path">
+                <strong>Tidak: lanjut jalur normal</strong>
+                Hitung TEWS total dari 6 parameter.
+            </div>
+        </div>
+        <div class="decision-connector">&rarr;</div>
+        <div class="decision-outcome">
+            <div class="decision-node" style="margin-bottom:0.55rem;">
+                <span class="decision-step-num">3</span>
+                <div>
+                    <div class="decision-title">Tentukan level dari TEWS</div>
+                    <div class="decision-text">Urutan dibaca dari paling kritis ke paling rendah.</div>
+                </div>
+            </div>
+            <div class="decision-path-list">
+                <div class="decision-path triage-orange"><strong>TEWS >= 7</strong>Level 2 Oranye, < 10 menit</div>
+                <div class="decision-path triage-yellow"><strong>TEWS 5-6</strong>Level 3 Kuning, < 60 menit</div>
+                <div class="decision-path triage-green"><strong>TEWS 3-4</strong>Level 4 Hijau, < 4 jam</div>
+                <div class="decision-path triage-blue"><strong>TEWS 0-2</strong>Level 5 Biru, < 6 jam</div>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    return
     steps = [
         {'num': 'Langkah 1', 'label': 'Pasien tiba → Ukur Tanda Vital & GCS'},
         {'num': 'Langkah 2', 'label': 'Cek Override Criteria (3 kondisi)'},
@@ -277,32 +322,28 @@ def render_references():
 
 def render_tab_guidelines():
     # ── Seksi A: 5 Level SATS ──
-    st.markdown('<div class="section-card">', unsafe_allow_html=True)
-    st.markdown('<div class="section-title">🏥 5 Level Triage SATS</div>', unsafe_allow_html=True)
-    render_sats_cards()
-    st.markdown('</div>', unsafe_allow_html=True)
+    with st.container(border=True):
+        st.markdown('<div class="section-title">🏥 5 Level Triage SATS</div>', unsafe_allow_html=True)
+        render_sats_cards()
 
     # ── Seksi B: Tabel TEWS ──
-    st.markdown('<div class="section-card">', unsafe_allow_html=True)
-    st.markdown('<div class="section-title">📊 Tabel Scoring TEWS Lengkap</div>', unsafe_allow_html=True)
-    render_tews_table()
-    st.markdown('</div>', unsafe_allow_html=True)
+    with st.container(border=True):
+        st.markdown('<div class="section-title">📊 Tabel Scoring TEWS Lengkap</div>', unsafe_allow_html=True)
+        render_tews_table()
 
     # ── Seksi C: Override Criteria ──
-    st.markdown('<div class="section-card">', unsafe_allow_html=True)
-    st.markdown('<div class="section-title">🚨 Kondisi Override — Langsung MERAH</div>', unsafe_allow_html=True)
-    st.markdown('<p style="font-size:0.82rem;color:var(--text-tertiary);margin-bottom:0.75rem;">Jika salah satu kondisi berikut terpenuhi, pasien langsung dikategorikan MERAH (Resusitasi) terlepas dari skor TEWS total.</p>', unsafe_allow_html=True)
-    render_override_cards()
-    st.markdown('</div>', unsafe_allow_html=True)
+    with st.container(border=True):
+        st.markdown('<div class="section-title">🚨 Kondisi Override — Langsung MERAH</div>', unsafe_allow_html=True)
+        st.markdown('<p style="font-size:0.82rem;color:var(--text-tertiary);margin-bottom:0.75rem;">Jika salah satu kondisi berikut terpenuhi, pasien langsung dikategorikan MERAH (Resusitasi) terlepas dari skor TEWS total.</p>', unsafe_allow_html=True)
+        render_override_cards()
 
     # ── Seksi D: Flowchart ──
-    st.markdown('<div class="section-card">', unsafe_allow_html=True)
-    st.markdown('<div class="section-title">🔄 Alur Keputusan Triage</div>', unsafe_allow_html=True)
-    render_flowchart()
-    st.markdown('</div>', unsafe_allow_html=True)
+    with st.container(border=True):
+        st.markdown('<div class="section-title">🔄 Alur Keputusan Triage</div>', unsafe_allow_html=True)
+        render_flowchart()
 
     # ── Seksi E: Referensi ──
-    st.markdown('<div class="section-card">', unsafe_allow_html=True)
-    st.markdown('<div class="section-title">📚 Referensi Ilmiah</div>', unsafe_allow_html=True)
-    render_references()
-    st.markdown('</div>', unsafe_allow_html=True)
+    with st.container(border=True):
+        st.markdown('<div class="section-title">📚 Referensi Ilmiah</div>', unsafe_allow_html=True)
+        render_references()
+
