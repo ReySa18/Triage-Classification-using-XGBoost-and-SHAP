@@ -2,6 +2,7 @@
 Reusable UI components for SATS/TEWS presentation.
 
 These helpers intentionally keep clinical/model logic outside the UI layer.
+Redesigned — solid color hero banners matching triage-redesign.html.
 """
 
 from backend.feature_engineering import SATS_FULL_LABELS, SATS_LABELS, SATS_WAKTU
@@ -77,15 +78,14 @@ def triage_badge_html(level: int, variant: str = "compact", extra_class: str = "
 
 
 def triage_result_hero_html(level: int) -> str:
+    """Result hero banner — solid color background, white text.
+    Matches the result-banner design from triage-redesign.html."""
     meta = TRIAGE_META[level]
     return (
         f'<div class="triage-hero triage-{meta["slug"]}">'
         f'<div class="triage-hero-top">'
-        f'<div class="triage-code" aria-hidden="true">'
-        f'<span class="triage-icon">{meta["icon"]}</span>'
-        f'<span class="triage-number">Level {meta["number"]}</span>'
-        f'</div>'
-        f'<div class="triage-time">{SATS_WAKTU[level]}</div>'
+        f'<span class="triage-number">LEVEL {meta["number"]} · SATS</span>'
+        f'<span class="triage-time">{SATS_WAKTU[level]}</span>'
         f'</div>'
         f'<div class="triage-hero-name">{SATS_FULL_LABELS[level]}</div>'
         f'<div class="triage-hero-subtitle">{meta["english"]}</div>'

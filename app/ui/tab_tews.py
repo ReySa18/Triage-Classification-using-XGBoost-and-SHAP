@@ -1,6 +1,7 @@
 """
 ui/tab_tews.py
 Tab 2: Kalkulator TEWS (real-time, tanpa tombol submit)
+Redesigned — matching triage-redesign.html
 """
 
 import streamlit as st
@@ -9,7 +10,7 @@ from backend.tews_calculator import (
     get_sats_zone_from_tews, get_active_range_label
 )
 from backend.feature_engineering import SATS_COLORS
-from ui.components import score_badge_html, triage_badge_html
+from ui.components import score_badge_html, triage_badge_html, triage_result_hero_html
 
 
 TEWS_REKOMENDASI = {
@@ -43,7 +44,7 @@ def render_tews_breakdown(subscores: dict, rr, spo2, sbp, hr, temp, gcs_total):
             <td style="font-weight:600;">{label}</td>
             <td>{value_str}</td>
             <td style="text-align:center;">{badge_html}</td>
-            <td style="font-size:0.75rem;color:var(--text-tertiary);font-style:italic;">{range_label}</td>
+            <td style="font-size:11px;color:var(--text-faint);font-style:italic;">{range_label}</td>
         </tr>"""
 
     st.markdown(f"""
@@ -82,7 +83,7 @@ def render_reference_table():
         ]),
     ]
 
-    html = '<table class="session-table" style="font-size:0.78rem;">'
+    html = '<table class="session-table" style="font-size:12px;">'
     html += '<thead><tr>'
     html += '<th>Parameter</th>'
     html += '<th style="text-align:center;">Rentang → Skor</th>'
@@ -94,7 +95,7 @@ def render_reference_table():
         html += f'<tr><td style="font-weight:600;">{param}</td><td>{ranges_html}</td></tr>'
     html += '</tbody></table>'
 
-    html += '<div style="margin-top:0.5rem;font-size:0.72rem;color:var(--text-tertiary);">'
+    html += '<div style="margin-top:0.5rem;font-size:10.5px;color:var(--text-faint);">'
     html += '<b>Ket:</b> Klik "Salin ke Tab Input" untuk mengirim data ke form prediksi.'
     html += '</div>'
     st.markdown(html, unsafe_allow_html=True)
@@ -114,7 +115,7 @@ def reset_tews_inputs():
 
 
 def render_tab_tews():
-    st.markdown('<p style="font-size:0.85rem;color:var(--text-tertiary);margin-bottom:1rem;">Kalkulator TEWS mandiri — skor diperbarui secara real-time setiap kali nilai berubah.</p>', unsafe_allow_html=True)
+    st.markdown('<p style="font-size:12.5px;color:var(--text-faint);margin-bottom:1rem;">Kalkulator TEWS mandiri — skor diperbarui secara real-time setiap kali nilai berubah.</p>', unsafe_allow_html=True)
 
     col_left, col_right = st.columns([5, 5], gap="large")
 
@@ -187,30 +188,28 @@ def render_tab_tews():
 
         # ── TEWS Total Display ──
         with st.container(border=True):
-            st.markdown('<div style="text-align:center;">', unsafe_allow_html=True)
-
             # Zone colors
             if tews_total <= 2:
-                tews_color = 'var(--sats-blue-dot)'
-                zone_label = 'Zona Biru'
+                tews_color = 'var(--sats-blue)'
             elif tews_total <= 4:
-                tews_color = 'var(--sats-green-dot)'
-                zone_label = 'Zona Hijau'
+                tews_color = 'var(--sats-green)'
             elif tews_total <= 6:
-                tews_color = 'var(--sats-yellow-dot)'
-                zone_label = 'Zona Kuning'
+                tews_color = 'var(--sats-yellow)'
             else:
-                tews_color = 'var(--sats-red-dot)'
-                zone_label = 'Zona Oranye+'
+                tews_color = 'var(--sats-red)'
 
             if overrides:
-                tews_color = 'var(--sats-red-dot)'
-                zone_label = 'OVERRIDE → Merah'
+                tews_color = 'var(--sats-red)'
 
-            sats_c = SATS_COLORS[sats_zone]
-            st.markdown(f'<div style="padding:0.5rem 0;"><div style="font-size:0.75rem;color:var(--text-tertiary);font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">TEWS Total</div><div class="tews-score-big" style="color:{tews_color};">{tews_total}</div></div>', unsafe_allow_html=True)
-            st.markdown(triage_badge_html(sats_zone), unsafe_allow_html=True)
-            st.markdown('</div>', unsafe_allow_html=True)
+            st.markdown(f"""
+            <div class="tews-total-card">
+                <div class="caption">TEWS TOTAL</div>
+                <div class="tews-score-big" style="color:{tews_color};">{tews_total}</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        # ── SATS Result Banner (solid color) ──
+        st.markdown(triage_result_hero_html(sats_zone), unsafe_allow_html=True)
 
         # ── Override Warning ──
         if overrides:
@@ -231,6 +230,7 @@ def render_tab_tews():
         with st.container(border=True):
             st.markdown('<div class="section-title">💊 Rekomendasi Tindakan</div>', unsafe_allow_html=True)
             rekomendasi = TEWS_REKOMENDASI[sats_zone]
+            sats_c = SATS_COLORS[sats_zone]
             rek_color = sats_c['text']
             rek_bg = sats_c['bg']
-            st.markdown(f'<div style="background:{rek_bg};border:1.5px solid {sats_c["border"]};border-radius:8px;padding:0.75rem 1rem;"><div style="font-size:0.85rem;color:{rek_color};font-weight:600;">{rekomendasi}</div></div>', unsafe_allow_html=True)
+            st.markdown(f'<div style="background:{rek_bg};border:1.5px solid {sats_c["border"]};border-radius:9px;padding:0.75rem 1rem;"><div style="font-size:12.5px;color:{rek_color};font-weight:600;">{rekomendasi}</div></div>', unsafe_allow_html=True)

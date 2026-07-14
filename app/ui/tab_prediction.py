@@ -1,6 +1,7 @@
 """
 ui/tab_prediction.py
 Tab 1: Input Pasien & Hasil Prediksi
+Redesigned — matching triage-redesign.html + ID Petugas feature
 """
 
 import streamlit as st
@@ -54,7 +55,7 @@ def render_probability_bars(probabilities: dict):
         prob = probabilities.get(label, 0)
         color = SATS_COLORS[cls]['dot']
         pct = prob * 100
-        html += f'<div class="prob-bar-row"><div class="prob-bar-label">{label}</div><div class="prob-bar-track"><div class="prob-bar-fill" style="width:{pct:.1f}%;background:{color};"></div></div><div class="prob-bar-pct">{pct:.1f}%</div></div>'
+        html += f'<div class="prob-bar-row"><span class="prob-bar-label">{label}</span><div class="prob-bar-track"><div class="prob-bar-fill" style="width:{pct:.1f}%;background:{color};"></div></div><span class="prob-bar-pct">{pct:.1f}%</span></div>'
     html += '</div>'
     st.markdown(html, unsafe_allow_html=True)
 
@@ -64,10 +65,8 @@ def render_flag_chips(active_flags: dict):
         st.markdown('<div class="flag-chip-empty">✓ Tidak ada flag klinis abnormal</div>', unsafe_allow_html=True)
         return
     html = '<div class="flags-container">'
-    icons = {'danger': '🔴', 'warning': '🟡'}
     for key, (label, severity) in active_flags.items():
-        icon = icons.get(severity, '⚪')
-        html += f'<span class="flag-chip {severity}">{icon} {label}</span>'
+        html += f'<span class="flag-chip {severity}">{label}</span>'
     html += '</div>'
     st.markdown(html, unsafe_allow_html=True)
 
@@ -111,44 +110,38 @@ def render_clinical_metrics(clinical_scores: dict):
 
 
 def render_shap_panel(shap_top_features: list, predicted_class: int):
-    sats_color = SATS_COLORS[predicted_class]['dot']
+    """SHAP waterfall bar chart — redesign style with center-line."""
 
-    # Find max abs shap for normalization
     max_abs = max(abs(sv) for _, sv, _ in shap_top_features) if shap_top_features else 1.0
     if max_abs == 0: max_abs = 1.0
 
     st.markdown("""
-    <div style="font-size:0.72rem;color:var(--text-tertiary);margin-bottom:0.75rem;display:flex;gap:1.5rem;">
+    <div style="font-size:10.5px;color:var(--text-faint);margin-bottom:0.75rem;display:flex;gap:1.5rem;">
         <span>🔴 Mendorong ke kelas lebih kritis</span>
         <span>🔵 Menekan ke kelas lebih aman</span>
     </div>""", unsafe_allow_html=True)
 
+    html = ''
     for feat_name, shap_val, display_name in shap_top_features:
         is_pos = shap_val >= 0
-        bar_pct = min(abs(shap_val) / max_abs * 45, 45)  # max 45% per side
+        bar_pct = min(abs(shap_val) / max_abs * 45, 45)
         val_str = f'+{shap_val:.3f}' if is_pos else f'{shap_val:.3f}'
-        val_color = '#E24B4A' if is_pos else '#378ADD'
-        bar_color = '#E24B4A' if is_pos else '#378ADD'
+        val_color = 'var(--sats-red)' if is_pos else 'var(--sats-blue)'
+        fill_class = 'pos' if is_pos else 'neg'
 
-        if is_pos:
-            bar_html = f'<div style="width:50%;display:flex;justify-content:flex-end;"></div><div style="width:50%;display:flex;align-items:center;"><div style="height:14px;width:{bar_pct}%;background:{bar_color};border-radius:0 4px 4px 0;"></div></div>'
-        else:
-            bar_html = f'<div style="width:50%;display:flex;justify-content:flex-end;align-items:center;"><div style="height:14px;width:{bar_pct}%;background:{bar_color};border-radius:4px 0 0 4px;"></div></div><div style="width:50%;"></div>'
+        html += f'''<div class="shap-row">
+<span class="shap-label">{display_name}</span>
+<div class="shap-track"><div class="shap-mid"></div><div class="shap-fill {fill_class}" style="width:{bar_pct}%"></div></div>
+<span class="shap-val" style="color:{val_color}">{val_str}</span>
+</div>'''
 
-        st.markdown(f'''<div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.45rem;">
-<div style="width:130px;font-size:0.75rem;color:var(--text-secondary);text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex-shrink:0;">{display_name}</div>
-<div style="flex:1;display:flex;position:relative;background:var(--shap-track-bg);border-radius:4px;overflow:hidden;">
-<div style="position:absolute;left:50%;top:0;bottom:0;width:1px;background:var(--shap-center);"></div>
-{bar_html}
-</div>
-<div style="width:48px;font-size:0.72rem;font-weight:600;color:{val_color};flex-shrink:0;">{val_str}</div>
-</div>''', unsafe_allow_html=True)
+    st.markdown(html, unsafe_allow_html=True)
 
 
 def render_session_history():
     history = st.session_state.get('prediction_history', [])
     if not history:
-        st.markdown('<div style="font-size:0.8rem;color:var(--text-tertiary);font-style:italic;text-align:center;padding:1rem;">Belum ada riwayat prediksi dalam sesi ini.</div>', unsafe_allow_html=True)
+        st.markdown('<div style="font-size:12px;color:var(--text-faint);font-style:italic;text-align:center;padding:1rem;">Belum ada riwayat prediksi dalam sesi ini.</div>', unsafe_allow_html=True)
         return
 
     sats_class_map = {'Merah': 0, 'Oranye': 1, 'Kuning': 2, 'Hijau': 3, 'Biru': 4}
@@ -157,6 +150,7 @@ def render_session_history():
     for i, entry in enumerate(reversed(history[-20:])):
         cls = sats_class_map.get(entry['prediksi'], 2)
         dot_color = SATS_COLORS[cls]['dot']
+        id_petugas = entry.get('id_petugas', '-')
         rows_html += f"""
         <tr>
             <td>{len(history) - i}</td>
@@ -169,27 +163,46 @@ def render_session_history():
                 <strong>{entry['prediksi']}</strong>
             </span></td>
             <td>{entry.get('confidence', '-')}%</td>
+            <td>{id_petugas}</td>
         </tr>"""
 
     st.markdown(f"""
     <div style="overflow-x:auto;">
     <table class="session-table">
         <thead><tr>
-            <th>#</th><th>Waktu</th><th>Nama</th><th>Usia</th><th>Prediksi</th><th>Confidence</th>
+            <th>#</th><th>Waktu</th><th>Nama</th><th>Usia</th><th>Prediksi</th><th>Confidence</th><th>ID Petugas</th>
         </tr></thead>
         <tbody>{rows_html}</tbody>
     </table>
     </div>""", unsafe_allow_html=True)
 
-    # Export CSV
+    # ─── ID Petugas input (required before export) ───
+    st.markdown('<hr style="margin:0.75rem 0;border:none;border-top:1px solid var(--border);">', unsafe_allow_html=True)
+    st.markdown('<div class="section-title" style="border-bottom:none;margin-bottom:0.5rem;padding-bottom:0;">📥 Export Data Riwayat</div>', unsafe_allow_html=True)
+
+    id_petugas_export = st.text_input(
+        "ID Petugas *",
+        placeholder="Masukkan ID petugas sebelum export (wajib)",
+        key="export_id_petugas",
+        max_chars=50,
+    )
+
+    if not id_petugas_export:
+        st.markdown('<div class="petugas-required">⚠️ ID Petugas wajib diisi untuk melakukan export data</div>', unsafe_allow_html=True)
+
+    # Export CSV — disabled if no ID Petugas
     df_hist = pd.DataFrame(history)
+    # Add export ID petugas column to all rows
+    df_hist['id_petugas_export'] = id_petugas_export if id_petugas_export else ''
     csv = df_hist.to_csv(index=False, encoding='utf-8-sig')
+
     st.download_button(
         label="📥 Export CSV",
         data=csv.encode('utf-8-sig'),
         file_name=f"riwayat_triage_{datetime.date.today()}.csv",
         mime='text/csv',
-        use_container_width=False,
+        use_container_width=True,
+        disabled=not bool(id_petugas_export),
     )
 
 
@@ -314,9 +327,7 @@ def render_tab_prediction(artifacts):
 
         # ── SEKSI C: Neurologis (GCS) ──
         with st.container(border=True):
-            st.markdown('<div class="section-title">🧠 Neurologis (GCS)</div>', unsafe_allow_html=True)
-
-            st.markdown('<div class="subsection-label">GCS (Glasgow Coma Scale)</div>', unsafe_allow_html=True)
+            st.markdown('<div class="section-title">🧠 Neurologis <span style="color:var(--text-faint);font-weight:500;font-size:11.5px;margin-left:6px;">Glasgow Coma Scale</span></div>', unsafe_allow_html=True)
 
             gcs_e_opts = {4: '4 — Spontan', 3: '3 — Respons suara', 2: '2 — Respons nyeri', 1: '1 — Tidak ada'}
             gcs_m_opts = {6: '6 — Ikuti perintah', 5: '5 — Lokasi nyeri', 4: '4 — Fleksi normal',
@@ -338,16 +349,16 @@ def render_tab_prediction(artifacts):
                 gcs_total = gcs_e + gcs_m + gcs_v
                 if gcs_total <= 8:
                     gcs_interp = 'Koma berat'
-                    gcs_color = '#E24B4A'
+                    gcs_color = 'var(--sats-red)'
                 elif gcs_total <= 12:
                     gcs_interp = 'Sedang'
-                    gcs_color = '#BA7517'
+                    gcs_color = 'var(--sats-yellow)'
                 elif gcs_total <= 14:
                     gcs_interp = 'Ringan'
-                    gcs_color = '#EF9F27'
+                    gcs_color = 'var(--sats-orange)'
                 else:
                     gcs_interp = 'Normal'
-                    gcs_color = '#639922'
+                    gcs_color = 'var(--sats-green)'
 
                 st.markdown(f'<div class="gcs-display" style="margin-top:1.5rem;"><div class="gcs-total-value">{gcs_total}</div><div class="gcs-total-label">GCS Total</div><div class="gcs-interpretation" style="color:{gcs_color};">{gcs_interp}</div></div>', unsafe_allow_html=True)
 
@@ -407,10 +418,14 @@ def render_tab_prediction(artifacts):
                     st.session_state['prediction_result'] = result
                     st.session_state['last_input'] = input_data
 
-                    # Add to history
+                    # Add to history (include id_petugas from session)
                     if 'prediction_history' not in st.session_state:
                         st.session_state['prediction_history'] = []
                     confidence = round(result['probabilities'].get(result['predicted_label'], 0) * 100, 1)
+
+                    # Get current ID petugas from session state
+                    current_id_petugas = st.session_state.get('inp_id_petugas', '')
+
                     st.session_state['prediction_history'].append({
                         'waktu': datetime.datetime.now().strftime('%H:%M:%S'),
                         'nama': nama or '-',
@@ -419,6 +434,7 @@ def render_tab_prediction(artifacts):
                         'confidence': confidence,
                         'tews': result['clinical_scores']['tews_total'],
                         'gcs': result['gcs_total'],
+                        'id_petugas': current_id_petugas or '-',
                     })
                 except Exception as e:
                     st.error(f"❌ Error prediksi: {e}")
@@ -433,28 +449,27 @@ def render_tab_prediction(artifacts):
                 <div class="placeholder-sub">Hasil klasifikasi SATS dan penjelasan SHAP akan muncul di sini</div>
             </div>""", unsafe_allow_html=True)
         else:
-            # ── A: SATS Badge ──
+            # ── A: SATS Badge (solid color banner) ──
             render_sats_badge(result['predicted_class'])
 
             # ── B: Probabilitas ──
-            st.markdown('<p style="font-size:0.78rem;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.05em;margin:0.5rem 0 0.35rem 0;">Distribusi Probabilitas</p>', unsafe_allow_html=True)
-            render_probability_bars(result['probabilities'])
-
-            st.divider()
+            with st.container(border=True):
+                st.markdown('<div class="section-title" style="border-bottom:none;padding-bottom:0;margin-bottom:0.5rem;">Distribusi Probabilitas</div>', unsafe_allow_html=True)
+                render_probability_bars(result['probabilities'])
 
             # ── C: Clinical Flags ──
-            st.markdown('<p style="font-size:0.82rem;font-weight:600;color:var(--text-primary);margin:0 0 0.4rem 0;">🚨 Clinical Flags Aktif</p>', unsafe_allow_html=True)
-            render_flag_chips(result['active_flags'])
+            with st.container(border=True):
+                st.markdown('<div class="section-title" style="border-bottom:none;padding-bottom:0;margin-bottom:0.5rem;">🚨 Clinical Flags Aktif</div>', unsafe_allow_html=True)
+                render_flag_chips(result['active_flags'])
 
-            st.divider()
+            # ── D: SHAP Panel ──
+            with st.container(border=True):
+                st.markdown('<div class="section-title" style="border-bottom:none;padding-bottom:0;margin-bottom:0.5rem;">🔍 Alasan Prediksi — Top Fitur (SHAP)</div>', unsafe_allow_html=True)
+                render_shap_panel(result['shap_top_features'], result['predicted_class'])
 
-            # ── D: Clinical Metrics ──
+            # ── E: Clinical Metrics ──
             with st.expander("📊 Skor Klinis Turunan", expanded=False):
                 render_clinical_metrics(result['clinical_scores'])
-
-            # ── E: SHAP Panel ──
-            with st.expander("🔍 Alasan Prediksi — Top Fitur (SHAP)", expanded=False):
-                render_shap_panel(result['shap_top_features'], result['predicted_class'])
 
             # ── F: Session History ──
             with st.expander("📋 Riwayat Sesi", expanded=False):
