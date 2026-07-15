@@ -149,23 +149,31 @@ footer { visibility: hidden; }
     stroke: var(--brand) !important;
 }
 
-.stSelectbox [data-baseweb="select"] {
-    background-color: #fff !important;
+.stSelectbox [data-baseweb="select"],
+[data-testid="stSelectbox"] [data-baseweb="select"] {
+    background-color: var(--surface) !important;
     border: 1px solid var(--border) !important;
     border-radius: 8px !important;
-}
-
-.stSelectbox [data-baseweb="select"] div {
-    background-color: transparent !important;
     color: var(--text) !important;
 }
 
-.stSelectbox [data-baseweb="select"] span {
+.stSelectbox [data-baseweb="select"] > div,
+[data-testid="stSelectbox"] [data-baseweb="select"] > div {
+    background-color: var(--surface) !important;
     color: var(--text) !important;
 }
 
-.stSelectbox svg {
+.stSelectbox [data-baseweb="select"] span,
+.stSelectbox [data-baseweb="select"] p,
+[data-testid="stSelectbox"] [data-baseweb="select"] span,
+[data-testid="stSelectbox"] [data-baseweb="select"] p {
+    color: var(--text) !important;
+}
+
+.stSelectbox svg,
+[data-testid="stSelectbox"] svg {
     fill: var(--text-soft) !important;
+    color: var(--text-soft) !important;
 }
 
 /* Selectbox dropdown menu */
@@ -443,26 +451,37 @@ hr {
 /* ── Tabs ── */
 .stTabs [data-baseweb="tab-list"] {
     gap: 2px;
-    background: var(--surface);
-    border: 1px solid var(--border);
+    background: var(--surface) !important;
+    border: 1px solid var(--border) !important;
     border-radius: var(--radius);
     padding: 4px;
     margin-bottom: 20px;
 }
-.stTabs [data-baseweb="tab"] {
+.stTabs [role="tab"] {
     border-radius: 7px;
-    font-weight: 600;
-    font-size: 13px;
     padding: 9px 16px;
-    color: var(--text-soft);
-    background: transparent;
-    border: none;
+    background: transparent !important;
+    border: none !important;
     transition: all 0.2s;
 }
-.stTabs [aria-selected="true"] {
+
+.stTabs [role="tab"],
+.stTabs [role="tab"] p,
+.stTabs [role="tab"] span {
+    color: var(--text-soft) !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+}
+
+.stTabs [role="tab"][aria-selected="true"] {
     background: var(--brand) !important;
-    color: white !important;
-    box-shadow: none;
+    box-shadow: none !important;
+}
+
+.stTabs [role="tab"][aria-selected="true"],
+.stTabs [role="tab"][aria-selected="true"] p,
+.stTabs [role="tab"][aria-selected="true"] span {
+    color: #FFFFFF !important;
 }
 
 /* ── Triage color system ── */
