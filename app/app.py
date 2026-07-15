@@ -6,8 +6,24 @@ XGBoost + SHAP + SATS-TEWS
 Run: streamlit run app/app.py
 """
 
-import os
+from pathlib import Path
+import sys
+
 import streamlit as st
+
+# Streamlit and its test runner initialize sys.path differently. Resolve all
+# local imports from this file so startup does not depend on the terminal cwd.
+APP_DIR = Path(__file__).resolve().parent
+ROOT_DIR = APP_DIR.parent
+if str(APP_DIR) not in sys.path:
+    sys.path.insert(0, str(APP_DIR))
+
+from deployment import (
+    RetrainingError,
+    artifacts_available,
+    invalid_artifacts,
+    run_retraining,
+)
 
 # ─── Page config (MUST be first Streamlit call) ────────────────────────────
 st.set_page_config(
@@ -21,18 +37,56 @@ st.set_page_config(
 )
 
 # ─── Load custom CSS ───────────────────────────────────────────────────────
-css_path = os.path.join(os.path.dirname(__file__), 'assets', 'style.css')
-if os.path.exists(css_path):
-    with open(css_path, 'r', encoding='utf-8') as f:
+css_path = APP_DIR / 'assets' / 'style.css'
+if css_path.is_file():
+    with css_path.open('r', encoding='utf-8') as f:
         css = f.read()
     st.markdown(f'<style>{css}</style>', unsafe_allow_html=True)
 
-# ─── Load model artifacts ─────────────────────────────────────────────────
+# ─── Ensure model artifacts exist before loading them ─────────────────────
+if not artifacts_available():
+    with st.status(
+        "Model belum tersedia. Sedang melakukan retraining...",
+        expanded=True,
+    ) as status:
+        try:
+            run_retraining()
+            remaining = invalid_artifacts()
+            if remaining:
+                missing_names = ", ".join(path.name for path in remaining)
+                raise RetrainingError(
+                    "Retraining selesai, tetapi satu atau lebih artefak model tidak terbentuk.",
+                    f"Artefak tidak valid: {missing_names}",
+                )
+
+            status.update(
+                label="Retraining selesai. Model siap digunakan.",
+                state="complete",
+                expanded=False,
+            )
+        except RetrainingError as error:
+            status.update(label="Retraining model gagal.", state="error")
+            st.error(str(error))
+            if error.details:
+                st.code(error.details, language="text")
+            st.stop()
+        except Exception as error:
+            status.update(label="Retraining model gagal.", state="error")
+            st.error("Terjadi kesalahan tidak terduga saat menyiapkan model.")
+            st.code(str(error), language="text")
+            st.stop()
+
+# ─── Load model artifacts only after successful validation ────────────────
 from backend.predictor import load_artifacts
 artifacts = load_artifacts()
 
-model_active = artifacts is not None
-model_version = artifacts.get('model_version', 'v2.0') if artifacts else '-'
+if artifacts is None:
+    load_artifacts.clear()
+    st.error("Model tidak dapat dimuat meskipun seluruh file artefak tersedia.")
+    st.stop()
+
+model_active = True
+model_version = artifacts.get('model_version', 'v2.0')
 
 # ─── Global Header (Topbar) ──────────────────────────────────────────────
 status_dot   = 'active' if model_active else 'inactive'
@@ -66,14 +120,6 @@ st.markdown("""
     <div class="legend-chip"><span class="legend-swatch" style="background:var(--sats-blue)"></span><span class="legend-text"><span class="legend-label">Biru — Not Urgent</span><span class="legend-time">&lt; 6 jam</span></span></div>
 </div>
 """, unsafe_allow_html=True)
-
-# ─── Model unavailable warning ────────────────────────────────────────────
-if not model_active:
-    st.error(
-        "⚠️ **Model tidak dapat dimuat.** Pastikan file `.pkl` tersedia di direktori `model/artifacts/`. "
-        "Jalankan `scripts/retrain.py` atau notebook untuk men-generate artefak."
-    )
-    st.stop()
 
 # ─── 3 Tabs ───────────────────────────────────────────────────────────────
 tab1, tab2, tab3 = st.tabs([

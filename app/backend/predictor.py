@@ -5,7 +5,7 @@ Gunakan @st.cache_resource agar model hanya di-load sekali.
 Model final — tanpa skala_nyeri (FEAT-007)
 """
 
-import os
+from pathlib import Path
 import warnings
 import numpy as np
 import pandas as pd
@@ -14,9 +14,9 @@ import streamlit as st
 
 warnings.filterwarnings('ignore')
 
-# app/backend/ -> app/ -> SKRIPSI/ (3 levels)
-BASE_DIR   = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-OUTPUT_DIR = os.path.join(BASE_DIR, 'model', 'artifacts')
+# app/backend/ -> app/ -> repository root
+ROOT_DIR = Path(__file__).resolve().parents[2]
+OUTPUT_DIR = ROOT_DIR / 'model' / 'artifacts'
 
 # Model final — artifact tanpa versi suffix (FEAT-007: tanpa skala_nyeri)
 MODEL_FILES = {
@@ -39,8 +39,8 @@ def load_artifacts():
     artifacts = {}
     try:
         for key, filename in MODEL_FILES.items():
-            path = os.path.join(OUTPUT_DIR, filename)
-            if not os.path.exists(path):
+            path = OUTPUT_DIR / filename
+            if not path.is_file() or path.stat().st_size <= 0:
                 st.error(f"File artefak tidak ditemukan: {path}")
                 return None
             artifacts[key] = joblib.load(path)

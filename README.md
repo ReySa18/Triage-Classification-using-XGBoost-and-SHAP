@@ -30,8 +30,10 @@ SKRIPSI/
 ├── data/
 │   ├── raw/
 │   │   └── Dataset_Klinis_Edit.csv  # Dataset mentah (.gitignore)
-│   └── processed/
-│       └── Dataset_Labeled_SATS.csv # Dataset berlabel SATS-TEWS
+│   ├── processed/
+│   │   └── Dataset_Labeled_SATS.csv # Dataset lengkap lokal (.gitignore)
+│   └── training/
+│       └── Dataset_Labeled_SATS_Training.csv # 31 fitur + label, tanpa identitas
 │
 ├── model/
 │   ├── artifacts/                   # Model artifacts (.pkl)
@@ -87,6 +89,11 @@ pip install -r requirements.txt
 ```bash
 streamlit run app/app.py
 ```
+
+Saat artefak inference belum lengkap atau berukuran 0 byte, aplikasi akan
+menjalankan `scripts/retrain.py` secara otomatis sebelum memuat model. Dataset
+training yang disertakan untuk deployment hanya memuat fitur model dan label;
+data klinis lengkap tetap tidak dilacak oleh Git.
 
 ### 3. Re-train Model (opsional)
 

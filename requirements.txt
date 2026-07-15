@@ -6,3 +6,5 @@ xgboost
 scikit-learn
 imbalanced-learn
 shap
+matplotlib
+openpyxl

@@ -7,14 +7,14 @@ sesuai PRD-FEAT-007 v1.0.
 Jalankan dari folder root proyek:
     python scripts/retrain.py
 
-Output artifact akan disimpan di: output/*.pkl
+Output artifact akan disimpan di: model/artifacts/*.pkl
 Estimasi waktu: 30–90 menit (tergantung spesifikasi mesin).
 """
 
-import os
 import sys
 import time
 import warnings
+from pathlib import Path
 import numpy as np
 import pandas as pd
 import joblib
@@ -22,10 +22,10 @@ import joblib
 warnings.filterwarnings('ignore')
 
 # ─── Paths ────────────────────────────────────────────────────────────────────
-# scripts/ -> SKRIPSI/ (2 levels up)
-BASE_DIR   = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DATA_PATH  = os.path.join(BASE_DIR, 'data', 'processed', 'Dataset_Labeled_SATS.csv')
-OUTPUT_DIR = os.path.join(BASE_DIR, 'model', 'artifacts')
+# Paths are derived from this file so execution never depends on the terminal cwd.
+ROOT_DIR = Path(__file__).resolve().parent.parent
+DATA_PATH = ROOT_DIR / 'data' / 'training' / 'Dataset_Labeled_SATS_Training.csv'
+ARTIFACT_DIR = ROOT_DIR / 'model' / 'artifacts'
 
 # ─── FEAT-007: FEATURE_COLS tanpa skala_nyeri ─────────────────────────────────
 FEATURE_COLS = [
@@ -72,21 +72,23 @@ def check_dependencies():
         except ImportError:
             missing.append(lib)
     if missing:
-        print(f"❌ Library berikut tidak terinstall: {missing}")
+        print(f"[ERROR] Library berikut tidak terinstall: {missing}")
         print("   Jalankan: pip install xgboost scikit-learn imbalanced-learn shap")
         sys.exit(1)
-    print("✅ Semua dependency tersedia")
+    print("[OK] Semua dependency tersedia")
 
 
 def load_dataset():
     print_section("1. Load Dataset")
-    if not os.path.exists(DATA_PATH):
-        print(f"❌ Dataset tidak ditemukan: {DATA_PATH}")
-        print("   Pastikan notebook V4 sudah dijalankan hingga Section 3 untuk generate dataset berlabel.")
+    if not DATA_PATH.is_file():
+        print(f"[ERROR] Dataset tidak ditemukan: {DATA_PATH}")
+        print("   Pastikan dataset training terdeidentifikasi tersedia di repository.")
         sys.exit(1)
 
     df = pd.read_csv(DATA_PATH)
-    print(f"   Dataset loaded: {df.shape[0]} baris, {df.shape[1]} kolom")
+    print(f"   Dataset berhasil dimuat: {df.shape[0]} baris, {df.shape[1]} kolom")
+    if TARGET_COL not in df.columns:
+        raise ValueError(f"Kolom target tidak ditemukan di dataset: {TARGET_COL}")
     print(f"   Distribusi label: {df[TARGET_COL].value_counts().to_dict()}")
     return df
 
@@ -101,7 +103,7 @@ def build_features(df: pd.DataFrame):
     # Pastikan semua kolom tersedia
     missing_cols = [c for c in FEATURE_COLS if c not in df.columns]
     if missing_cols:
-        print(f"❌ Kolom tidak ditemukan di dataset: {missing_cols}")
+        print(f"[ERROR] Kolom tidak ditemukan di dataset: {missing_cols}")
         print("   Mungkin perlu regenerate Dataset_Labeled_SATS_v4.csv dari notebook V4.")
         sys.exit(1)
 
@@ -110,8 +112,8 @@ def build_features(df: pd.DataFrame):
         if col in df.columns:
             df[col] = df[col].clip(lo, hi)
 
-    print(f"   📊 Total fitur v5: {len(FEATURE_COLS)}")
-    print(f"   ℹ️  skala_nyeri dihapus (FEAT-007): zero information gain terhadap label SATS-TEWS")
+    print(f"   [INFO] Total fitur v5: {len(FEATURE_COLS)}")
+    print("   [INFO] skala_nyeri dihapus (FEAT-007): zero information gain terhadap label SATS-TEWS")
 
     X = df[FEATURE_COLS].copy()
     y = df[TARGET_COL].copy()
@@ -168,7 +170,7 @@ def scale_features(X_train, X_test):
     if hasattr(scaler, 'feature_names_in_'):
         assert 'skala_nyeri' not in scaler.feature_names_in_, \
             "FEAT-007 FAIL: skala_nyeri masih ada di scaler.feature_names_in_!"
-    print("   ✅ FEAT-007: scaler fitted tanpa skala_nyeri")
+    print("   [OK] FEAT-007: scaler fitted tanpa skala_nyeri")
     return X_train_scaled, X_test_scaled, scaler
 
 
@@ -235,12 +237,12 @@ def train_model(X_train_scaled, y_train):
         verbose=1,
     )
 
-    print(f"   🚀 Mulai RandomizedSearchCV (100 iter × 5-fold)...")
+    print("   Mulai RandomizedSearchCV (100 iter x 5-fold)...")
     t0 = time.time()
     search.fit(X_train_scaled, y_train)
     elapsed = time.time() - t0
 
-    print(f"   ✅ Training selesai dalam {elapsed/60:.1f} menit")
+    print(f"   [OK] Training selesai dalam {elapsed/60:.1f} menit")
     print(f"   Best CV F1-Macro: {search.best_score_:.4f}")
     print(f"   Best params: {search.best_params_}")
 
@@ -324,7 +326,7 @@ def compute_shap(best_pipeline, X_train_scaled):
     # Extract XGBoost model dari pipeline
     xgb_model = best_pipeline.named_steps['xgb']
     explainer = shap.TreeExplainer(xgb_model)
-    print(f"   ✅ SHAP explainer dibuat")
+    print("   [OK] SHAP explainer dibuat")
     return explainer
 
 
@@ -332,44 +334,39 @@ def save_artifacts(best_pipeline, scaler, imputer, explainer,
                    best_params, best_thresholds,
                    train_idx, test_idx, metrics):
     print_section("10. Save Artifact (Model Final)")
+    ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)
 
     # Model final — artifact tanpa suffix versi (FEAT-007: tanpa skala_nyeri)
     paths = {
-        'model':     os.path.join(OUTPUT_DIR, 'model_triage_xgb.pkl'),
-        'pipeline':  os.path.join(OUTPUT_DIR, 'pipeline_imblearn.pkl'),
-        'scaler':    os.path.join(OUTPUT_DIR, 'scaler_minmax.pkl'),
-        'features':  os.path.join(OUTPUT_DIR, 'feature_names.pkl'),
-        'thresholds':os.path.join(OUTPUT_DIR, 'best_thresholds.pkl'),
-        'params':    os.path.join(OUTPUT_DIR, 'best_params.pkl'),
-        'imputer':   os.path.join(OUTPUT_DIR, 'imputer.pkl'),
-        'split':     os.path.join(OUTPUT_DIR, 'split_indices.pkl'),
+        'model':     ARTIFACT_DIR / 'model_triage_xgb.pkl',
+        'pipeline':  ARTIFACT_DIR / 'pipeline_imblearn.pkl',
+        'scaler':    ARTIFACT_DIR / 'scaler_minmax.pkl',
+        'explainer': ARTIFACT_DIR / 'shap_explainer.pkl',
+        'features':  ARTIFACT_DIR / 'feature_names.pkl',
+        'thresholds': ARTIFACT_DIR / 'best_thresholds.pkl',
+        'params':    ARTIFACT_DIR / 'best_params.pkl',
+        'imputer':   ARTIFACT_DIR / 'imputer.pkl',
+        'split':     ARTIFACT_DIR / 'split_indices.pkl',
     }
 
     xgb_model = best_pipeline.named_steps['xgb']
     joblib.dump(xgb_model,       paths['model'])
     joblib.dump(best_pipeline,   paths['pipeline'])
     joblib.dump(scaler,          paths['scaler'])
+    joblib.dump(explainer,       paths['explainer'])
     joblib.dump(FEATURE_COLS,    paths['features'])
     joblib.dump(best_thresholds, paths['thresholds'])
     joblib.dump(best_params,     paths['params'])
     joblib.dump(imputer,         paths['imputer'])
     joblib.dump({'train': train_idx, 'test': test_idx}, paths['split'])
 
-    # Try save SHAP explainer (bisa besar, skip jika error)
-    try:
-        import shap
-        explainer_path = os.path.join(OUTPUT_DIR, 'shap_explainer.pkl')
-        joblib.dump(explainer, explainer_path)
-        print(f"   ✅ shap_explainer.pkl disimpan")
-    except Exception as e:
-        print(f"   ⚠️  SHAP explainer gagal disimpan: {e}")
-
     for name, path in paths.items():
-        if os.path.exists(path):
-            size_kb = os.path.getsize(path) / 1024
-            print(f"   ✅ {os.path.basename(path):35s} ({size_kb:.0f} KB)")
-        else:
-            print(f"   ❌ {os.path.basename(path)} — GAGAL DISIMPAN")
+        if not path.is_file() or path.stat().st_size <= 0:
+            raise RuntimeError(f"Artefak gagal disimpan atau kosong: {path}")
+        size_kb = path.stat().st_size / 1024
+        print(f"   [OK] {path.name:35s} ({size_kb:.0f} KB)")
+
+    print("   Artefak berhasil disimpan")
 
     # ── FEAT-007 Verification ──────────────────────────────────────────────
     print_section("FEAT-007 VERIFICATION")
@@ -379,17 +376,20 @@ def save_artifacts(best_pipeline, scaler, imputer, explainer,
     assert 'skala_nyeri' not in feat_saved, \
         "FEAT-007 FAIL: skala_nyeri masih ada di feature_names.pkl"
 
-    print(f"   ✅ AC-F07-M01: skala_nyeri tidak ada di FEATURE_COLS ({len(FEATURE_COLS)} fitur)")
-    print(f"   ✅ AC-F07-M02: feature_names.pkl tidak mengandung skala_nyeri")
-    print(f"   ✅ AC-F07-M05: Training selesai tanpa error")
-    print(f"   ✅ AC-F07-M08: Semua artifact final tersimpan di output/")
+    print(f"   [OK] AC-F07-M01: skala_nyeri tidak ada di FEATURE_COLS ({len(FEATURE_COLS)} fitur)")
+    print("   [OK] AC-F07-M02: feature_names.pkl tidak mengandung skala_nyeri")
+    print("   [OK] AC-F07-M05: Training selesai tanpa error")
+    print("   [OK] AC-F07-M08: Semua artifact final tersimpan di model/artifacts/")
 
-    print(f"\n   📊 Ringkasan Performa v5:")
+    print("\n   [INFO] Ringkasan Performa v5:")
     for k, v in metrics.items():
         print(f"      {k:25s}: {v:.4f}")
 
 
-def main():
+def train_and_save_artifacts():
+    """Train the model and persist every artifact required for inference."""
+    ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)
+    print("Memulai retraining")
     print("=" * 60)
     print("  RETRAIN MODEL TRIAGE IGD — v5 (FEAT-007)")
     print("  Penghapusan skala_nyeri dari pipeline")
@@ -419,12 +419,8 @@ def main():
     # Thresholds
     best_thresholds = compute_thresholds(best_pipeline, X_test_scaled, y_test)
 
-    # SHAP
-    try:
-        explainer = compute_shap(best_pipeline, X_train_scaled)
-    except Exception as e:
-        print(f"   ⚠️  SHAP gagal: {e}. Melanjutkan tanpa explainer.")
-        explainer = None
+    # SHAP is mandatory for inference; let failures produce a non-zero exit code.
+    explainer = compute_shap(best_pipeline, X_train_scaled)
 
     # Save
     save_artifacts(
@@ -434,11 +430,11 @@ def main():
     )
 
     print("\n" + "=" * 60)
-    print("  ✅ RETRAIN SELESAI! Artifact final tersimpan.")
-    print("  Artifact tersimpan di: output/*.pkl")
-    print("  Jalankan UI: python -m streamlit run app.py")
+    print("  [OK] Retraining selesai! Artifact final tersimpan.")
+    print(f"  Artifact tersimpan di: {ARTIFACT_DIR}")
+    print("  Jalankan UI: python -m streamlit run app/app.py")
     print("=" * 60)
 
 
 if __name__ == '__main__':
-    main()
+    train_and_save_artifacts()

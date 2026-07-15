@@ -30,6 +30,7 @@ model/artifacts/shap_explainer.pkl
 # Data rekam medis tidak boleh di-commit ke repository publik
 data/raw/Dataset_Klinis_Edit.csv
 data/processed/Dataset_Labeled_SATS.csv
+# data/training/ sengaja dilacak: hanya 31 fitur model + label, tanpa identitas
 
 # ─── OS & Editor ────────────────────────────────────────────
 .DS_Store
