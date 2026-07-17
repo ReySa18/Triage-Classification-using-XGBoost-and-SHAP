@@ -23,6 +23,69 @@ FEATURE_COLS = [
     'cara_datang_KLL', 'cara_datang_Puskesmas', 'cara_datang_Sendiri',
 ]
 
+# Raw clinical inputs required before feature engineering can run. Keep this
+# definition centralized so the UI and backend apply the same completeness
+# policy and present consistent field labels.
+REQUIRED_INPUT_FIELDS = (
+    ('usia_tahun', 'Usia (tahun)'),
+    ('jenis_kelamin', 'Jenis Kelamin'),
+    ('cara_datang', 'Cara Datang'),
+    ('GCS_E', 'GCS Eye (E)'),
+    ('GCS_M', 'GCS Motor (M)'),
+    ('GCS_V', 'GCS Verbal (V)'),
+    ('sistole', 'Sistole'),
+    ('diastole', 'Diastole'),
+    ('denyut_jantung', 'Denyut Jantung'),
+    ('laju_pernafasan', 'Laju Pernafasan'),
+    ('suhu_tubuh', 'Suhu Tubuh'),
+    ('SpO2', 'SpO₂'),
+)
+REQUIRED_INPUT_LABELS = dict(REQUIRED_INPUT_FIELDS)
+
+
+class IncompleteInputError(ValueError):
+    """Raised when one or more required clinical inputs are unavailable."""
+
+    def __init__(self, missing_fields) -> None:
+        self.missing_fields = tuple(missing_fields)
+        self.missing_labels = tuple(
+            REQUIRED_INPUT_LABELS.get(field, field)
+            for field in self.missing_fields
+        )
+        field_list = ", ".join(self.missing_labels)
+        super().__init__(f"Input wajib belum lengkap: {field_list}")
+
+
+def _is_missing_input(value) -> bool:
+    """Return True for None, NaN/pd.NA, or an empty text value."""
+    if value is None:
+        return True
+    if isinstance(value, str):
+        return not value.strip()
+    try:
+        missing = pd.isna(value)
+        return bool(missing) if np.isscalar(missing) else False
+    except (TypeError, ValueError):
+        return False
+
+
+def get_missing_required_fields(input_data: dict) -> list[str]:
+    """Return required input keys that are absent or contain empty values."""
+    if not isinstance(input_data, dict):
+        raise TypeError("input_data harus berupa dictionary")
+    return [
+        field
+        for field, _label in REQUIRED_INPUT_FIELDS
+        if field not in input_data or _is_missing_input(input_data[field])
+    ]
+
+
+def validate_required_inputs(input_data: dict) -> None:
+    """Reject incomplete clinical input before any feature is calculated."""
+    missing_fields = get_missing_required_fields(input_data)
+    if missing_fields:
+        raise IncompleteInputError(missing_fields)
+
 SATS_LABELS = {
     0: 'Merah',
     1: 'Oranye',
@@ -122,24 +185,27 @@ def build_feature_vector(input_data: dict) -> pd.DataFrame:
         cara_datang, GCS_E, GCS_M, GCS_V,
         sistole, diastole, denyut_jantung, laju_pernafasan, suhu_tubuh, SpO2
     """
-    # Raw values
-    usia = float(input_data.get('usia_tahun', 30))
-    jk = input_data.get('jenis_kelamin', 'Laki-laki')
-    jk_enc = 1 if 'Laki' in str(jk) else 0
-    cara = clean_cara_datang(input_data.get('cara_datang', 'Sendiri'))
+    validate_required_inputs(input_data)
 
-    gcs_e = float(input_data.get('GCS_E', 4))
-    gcs_m = float(input_data.get('GCS_M', 6))
-    gcs_v = float(input_data.get('GCS_V', 5))
+    # Raw values. Required fields are accessed directly so missing clinical
+    # data can never be replaced silently with normal/default patient values.
+    usia = float(input_data['usia_tahun'])
+    jk = input_data['jenis_kelamin']
+    jk_enc = 1 if 'Laki' in str(jk) else 0
+    cara = clean_cara_datang(input_data['cara_datang'])
+
+    gcs_e = float(input_data['GCS_E'])
+    gcs_m = float(input_data['GCS_M'])
+    gcs_v = float(input_data['GCS_V'])
     gcs_total = int(gcs_e + gcs_m + gcs_v)
 
     # FEAT-007: skala_nyeri tidak lagi di-ekstrak dari input_data
-    sistole = float(input_data.get('sistole', 120))
-    diastole = float(input_data.get('diastole', 80))
-    hr = float(input_data.get('denyut_jantung', 80))
-    rr = float(input_data.get('laju_pernafasan', 16))
-    temp = float(input_data.get('suhu_tubuh', 36.5))
-    spo2 = float(input_data.get('SpO2', 98))
+    sistole = float(input_data['sistole'])
+    diastole = float(input_data['diastole'])
+    hr = float(input_data['denyut_jantung'])
+    rr = float(input_data['laju_pernafasan'])
+    temp = float(input_data['suhu_tubuh'])
+    spo2 = float(input_data['SpO2'])
 
     # Derived features
     kelompok_usia = get_kelompok_usia(int(usia))

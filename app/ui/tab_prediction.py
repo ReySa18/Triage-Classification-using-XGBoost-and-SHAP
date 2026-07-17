@@ -7,7 +7,12 @@ Redesigned — matching triage-redesign.html + ID Petugas feature
 import streamlit as st
 import pandas as pd
 import datetime
-from backend.feature_engineering import SATS_COLORS
+from backend.feature_engineering import (
+    IncompleteInputError,
+    REQUIRED_INPUT_LABELS,
+    SATS_COLORS,
+    get_missing_required_fields,
+)
 from ui.components import LABEL_TO_CLASS, TRIAGE_ORDER, triage_result_hero_html
 
 
@@ -20,6 +25,28 @@ VITAL_THRESHOLDS = {
     'suhu_tubuh':       {'warn_low': 35.0,'warn_high': 38.5,'danger_low': 35.0,'danger_high': 39.5,'normal': '36.0–37.5 °C'},
     'SpO2':             {'warn_low': 95,  'warn_high': 100, 'danger_low': 90,  'danger_high': 100, 'normal': '97–100 %'},
 }
+
+
+@st.dialog("Input Belum Lengkap")
+def render_incomplete_input_dialog(missing_labels) -> None:
+    """Explain which required fields must be completed before prediction."""
+    st.warning("Prediksi belum dapat diproses karena data wajib belum lengkap.")
+    fields_markdown = "\n".join(f"- **{label}**" for label in missing_labels)
+    st.markdown(f"Lengkapi field berikut:\n\n{fields_markdown}")
+    if st.button(
+        "Kembali Melengkapi Input",
+        type="primary",
+        use_container_width=True,
+        key="btn_close_incomplete_input_dialog",
+    ):
+        st.rerun()
+
+
+def clear_current_prediction() -> None:
+    """Remove a stale result when the current input cannot be predicted."""
+    for key in ('prediction_result', 'last_input'):
+        st.session_state.pop(key, None)
+
 
 def vital_status(field: str, value) -> str:
     if value is None: return 'normal'
@@ -365,8 +392,29 @@ def render_tab_prediction(artifacts):
         # FEAT-007: skala_nyeri dihapus dari UI sepenuhnya
 
         # ── SEKSI D: Tombol Aksi ──
-        required_fields = [usia, sistole, diastole, hr, rr, suhu, spo2]
-        all_filled = all(v is not None for v in required_fields)
+        cara_clean = {
+            'Sendiri': 'Sendiri',
+            'KLL (Kecelakaan)': 'KLL',
+            'Rujukan Puskesmas': 'Puskesmas',
+            'Rujukan Dokter': 'Dokter',
+        }.get(cara_datang, 'Sendiri')
+        input_data = {
+            'usia_tahun': usia,
+            'jenis_kelamin': jenis_kelamin,
+            'cara_datang': cara_clean,
+            'GCS_E': gcs_e,
+            'GCS_M': gcs_m,
+            'GCS_V': gcs_v,
+            # skala_nyeri dihapus — FEAT-007
+            'sistole': sistole,
+            'diastole': diastole,
+            'denyut_jantung': hr,
+            'laju_pernafasan': rr,
+            'suhu_tubuh': suhu,
+            'SpO2': spo2,
+        }
+        missing_fields = get_missing_required_fields(input_data)
+        all_filled = not missing_fields
 
         btn_col1, btn_col2 = st.columns([3, 1])
         with btn_col1:
@@ -374,20 +422,16 @@ def render_tab_prediction(artifacts):
                 "🔍 Prediksi Triage",
                 type="primary",
                 use_container_width=True,
-                disabled=not all_filled,
                 key="btn_predict"
             )
         with btn_col2:
             reset_btn = st.button("🔄 Reset", use_container_width=True, key="btn_reset")
 
         if not all_filled:
-            st.caption("⚠️ Lengkapi semua field wajib (*) untuk mengaktifkan prediksi")
+            st.caption("⚠️ Lengkapi semua field wajib (*) sebelum melakukan prediksi")
 
         if reset_btn:
-            # Clear relevant session state keys
-            for k in ['prediction_result', 'last_input']:
-                if k in st.session_state:
-                    del st.session_state[k]
+            clear_current_prediction()
             st.rerun()
 
     # ══════════════════════════════════════════════════════
@@ -396,48 +440,45 @@ def render_tab_prediction(artifacts):
     with col_output:
 
         # ── Handle prediction ──
-        if predict_btn and all_filled:
-            cara_clean = {'Sendiri': 'Sendiri', 'KLL (Kecelakaan)': 'KLL',
-                          'Rujukan Puskesmas': 'Puskesmas', 'Rujukan Dokter': 'Dokter'}.get(cara_datang, 'Sendiri')
+        if predict_btn:
+            if missing_fields:
+                clear_current_prediction()
+                missing_labels = [
+                    REQUIRED_INPUT_LABELS[field]
+                    for field in missing_fields
+                ]
+                render_incomplete_input_dialog(missing_labels)
+            else:
+                from backend.predictor import predict_triage_v3
+                with st.spinner("Memproses prediksi..."):
+                    try:
+                        result = predict_triage_v3(input_data, artifacts)
+                        st.session_state['prediction_result'] = result
+                        st.session_state['last_input'] = input_data
 
-            input_data = {
-                'usia_tahun': int(usia),
-                'jenis_kelamin': jenis_kelamin,
-                'cara_datang': cara_clean,
-                'GCS_E': gcs_e, 'GCS_M': gcs_m, 'GCS_V': gcs_v,
-                # skala_nyeri dihapus — FEAT-007
-                'sistole': sistole, 'diastole': diastole,
-                'denyut_jantung': hr, 'laju_pernafasan': rr,
-                'suhu_tubuh': suhu, 'SpO2': spo2,
-            }
+                        # Add to history (include id_petugas from session)
+                        if 'prediction_history' not in st.session_state:
+                            st.session_state['prediction_history'] = []
+                        confidence = round(result['probabilities'].get(result['predicted_label'], 0) * 100, 1)
 
-            from backend.predictor import predict_triage_v3
-            with st.spinner("Memproses prediksi..."):
-                try:
-                    result = predict_triage_v3(input_data, artifacts)
-                    st.session_state['prediction_result'] = result
-                    st.session_state['last_input'] = input_data
+                        # Get current ID petugas from session state
+                        current_id_petugas = st.session_state.get('inp_id_petugas', '')
 
-                    # Add to history (include id_petugas from session)
-                    if 'prediction_history' not in st.session_state:
-                        st.session_state['prediction_history'] = []
-                    confidence = round(result['probabilities'].get(result['predicted_label'], 0) * 100, 1)
-
-                    # Get current ID petugas from session state
-                    current_id_petugas = st.session_state.get('inp_id_petugas', '')
-
-                    st.session_state['prediction_history'].append({
-                        'waktu': datetime.datetime.now().strftime('%H:%M:%S'),
-                        'nama': nama or '-',
-                        'usia': usia,
-                        'prediksi': result['predicted_label'],
-                        'confidence': confidence,
-                        'tews': result['clinical_scores']['tews_total'],
-                        'gcs': result['gcs_total'],
-                        'id_petugas': current_id_petugas or '-',
-                    })
-                except Exception as e:
-                    st.error(f"❌ Error prediksi: {e}")
+                        st.session_state['prediction_history'].append({
+                            'waktu': datetime.datetime.now().strftime('%H:%M:%S'),
+                            'nama': nama or '-',
+                            'usia': usia,
+                            'prediksi': result['predicted_label'],
+                            'confidence': confidence,
+                            'tews': result['clinical_scores']['tews_total'],
+                            'gcs': result['gcs_total'],
+                            'id_petugas': current_id_petugas or '-',
+                        })
+                    except IncompleteInputError as error:
+                        clear_current_prediction()
+                        render_incomplete_input_dialog(error.missing_labels)
+                    except Exception as e:
+                        st.error(f"❌ Error prediksi: {e}")
 
         result = st.session_state.get('prediction_result')
 

@@ -92,13 +92,14 @@ def predict_triage_v3(input_data: dict, artifacts: dict) -> dict:
             DeprecationWarning, stacklevel=2
         )
 
+    # 1. Validate raw input and build the feature vector before accessing any
+    # model artifact. Incomplete submissions must stop at the boundary.
+    X_raw = build_feature_vector(input_data)
+
     model = artifacts['model']
     scaler = artifacts['scaler']
     explainer = artifacts['explainer']
     thresholds = artifacts['thresholds']
-
-    # 1. Build feature vector
-    X_raw = build_feature_vector(input_data)
 
     # 2. Impute (if needed)
     imputer = artifacts['imputer']
